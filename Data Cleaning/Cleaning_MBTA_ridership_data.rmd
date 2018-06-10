@@ -1,0 +1,18 @@
+---
+title: " Cleaning MBTA ridership data"
+author: "Jane Kathambi"
+date: "8 June 2018"
+output: 
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+
+# .
+
+# Introduction
