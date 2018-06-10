@@ -21,6 +21,7 @@ The Massachusetts Bay Transportation Authority ("MBTA" or just "the T" for short
 We are going to clean this data step by step as shown below:
 
 1. **Understand the structure of the data.**
+    + Look at the data strucutre and remove any unecessary data.
 2. **Tidy the data** by making sure that the three principles of tidy data are followed.We will make sure that:
 
     + Each variable forms a column.
@@ -29,8 +30,8 @@ We are going to clean this data step by step as shown below:
 
 We will use tidyr functions which include:
 
-* **Spread:** If values are column names instead of being values, spread them into key-value pairs
-* **Gather:** If column names are values (instead of being column names), gather them into Key-Value Pairs.
+* **Spread:** If values are stored as column names instead of being values, spread them into key-value pairs
+* **Gather:** If column names are stored as values (instead of being column names), gather them into Key-Value Pairs.
 * **Unite** to unite multiple columns into one column.
 * **Separate** to separateone column into multiple columns
 
@@ -45,7 +46,7 @@ We will use tidyr functions which include:
 
 The Massachusetts Bay Transportation Authority ("MBTA") is stored as an Excel spreadsheet called mbta.xlsx in the data folder that is inside the data cleaning folder. We will use the read_excel() function from Hadley Wickham's readxl package to import it.
 
-In most cases excel spreadhseets have some rows that need to be skipped e.g a title. However, the first time one imports a dataset, they might not know how many rows need to be skipped. So one needs to import the data and explore the first few rows, identify the ones that need to be ommited and omit them and save the resulting data frame to a new name. If one knows how many rows to skip then they can go ahead and skip them while importing. 
+In most cases excel spreadhseets have some rows that need to be skipped e.g title, total. However, the first time one imports a dataset, they might not know how many rows need to be skipped. So one needs to import the data and explore the first few rows, identify the ones that need to be ommited and omit them and save the resulting data frame to a new name. If one knows how many rows to skip then they can go ahead and skip them while importing. 
 
 
 # Loading the required packages
@@ -57,7 +58,7 @@ We will import the excel data using the readxl package. We will require tidyr fo
 library(readxl)
 
 #Load the tidyverse library
-library(tidyverse)
+library(tidyr)
 
 ```
 
@@ -70,3 +71,29 @@ Go to the data folder and open the excel file. You will realise that the first r
 mbta<-read_excel("data/mbta.xlsx", skip=1)
 
 ```
+
+# Exploring the data
+Lets check out how the data is. We do this having the three principles of tidy data in mind.
+```{r}
+# View the structure of mbta
+glimpse(mbta)
+
+# View the first 6 rows of mbta
+head(mbta)
+
+# View a summary of mbta
+summary(mbta)
+```
+
+The following issues have arised from exploring the data:
+
+1. There is a unecessary column. i.e the first column which lists the observations.
+2. There are unecessary rows:
+    + All Modes by Qtr row. This 1st row is a quarterly average of weekday MBTA ridership. Since this dataset tracks monthly average ridership, this row does not belong to this data frame. Furthermore, this explains why it has missing data.
+    + Pct Chg / Yr row. This 7th row is not an observation but an analysis
+    + TOTAL row. This 11th row is not an observation but an analysis. 
+    
+3. There is missing data.
+    + There is missing data in All Modes by Qtr row. This dataset tracks monthly average ridership. However, this 1st row is a quarterly average of weekday MBTA ridership and this explains why it is has missing data.
+4. observations(values) are stored as columns rather than as rows.
+
