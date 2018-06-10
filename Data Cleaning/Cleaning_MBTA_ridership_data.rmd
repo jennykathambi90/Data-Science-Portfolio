@@ -7,13 +7,13 @@ output:
     keep_md: yes
     theme: united
     toc: yes
+    number_sections: true
     toc_depth: 4
     toc_float:
       collapsed: yes
       smooth_scroll: yes
 ---
 
-# .
 
 # Introduction
 The Massachusetts Bay Transportation Authority ("MBTA" or just "the T" for short) manages America's oldest subway, as well as Greater Boston's commuter rail, ferry, and bus systems.
@@ -93,20 +93,22 @@ The following issues have arised from exploring the data:
 
 1. There is a unnecessary column. i.e the first column which lists the observations.
 2. There are unnecessary rows:
-    + All Modes by Qtr row. This 1st row is a quarterly average of weekday MBTA ridership. Since this dataset tracks monthly average ridership, this row does not belong to this data frame. Furthermore, this explains why it has missing data.
+    + All mode by Qtr row. This 1st row is a quarterly average of weekday MBTA ridership. Since this dataset tracks monthly average ridership, this row does not belong to this data frame. Furthermore, this explains why it has missing data.
     + Pct Chg / Yr row. This 7th row is not an observation but an analysis
     + TOTAL row. This 11th row is not an observation but an analysis. 
     
 3. There is missing data.
-    + There is missing data in 'All Modes by Qtr' row. This dataset tracks monthly average ridership. However, this 1st row is a quarterly average of weekday MBTA ridership and this explains why it is has missing data.
-4. Observations(values) are stored as columns rather than as rows.
-5. Column names(variables) are stored as rows rather than as columns.
+    + There is missing data in 'All mode by Qtr' row. This dataset tracks monthly average ridership. However, this 1st row is a quarterly average of weekday MBTA ridership and this explains why it is has missing data.
+4. Observations(values) i.e months are stored as columns rather than as rows.
+5. Column names(variables) i.e *mode* are stored as rows rather than as columns.
 
 # Cleaning the data
+We tidy the data first, then prepare the data for data analysis.
 
-In this section we are going to deal with the above data quality issues.
+## Tidying the data
+In this section we are going to tidy the data by dealing with the above data quality issues from issue number 1 to number 5.
 
-## 1. Removing the unnecessary column
+### Removing the unnecessary column
 
 ```{r}
 # Remove the first column of mbta and save the new data frame as mbta1
@@ -117,7 +119,7 @@ head(mbta1)
 
 ```
 
-## 2. Removing the unnecessary rows
+### Removing the unnecessary rows
 
 ```{r}
 # Remove rows 1, 7, and 11 of mbta: mbta2
@@ -127,25 +129,25 @@ mbta2<-mbta1[-c(1,7,11),]
 View(mbta2)
 ```
 
-## 3. Dealing with the missing data
+### Dealing with the missing data
 
-There is missing data in 'All Modes by Qtr' row. This dataset tracks monthly average ridership. However, this 1st row is a quarterly average of weekday MBTA ridership and this explains why it is has missing data.
+There is missing data in 'All mode by Qtr' row. This dataset tracks monthly average ridership. However, this 1st row is a quarterly average of weekday MBTA ridership and this explains why it is has missing data.
 
 We have already removed this row as a unnecessary row.
 
-## 4. Gathering the columns
+### Gathering the columns
 
-Observations(values) are stored as columns rather than as rows.
+Observations(values) i.e months are stored as columns rather than as rows.
 
 Viewing mbta2 shows that the months themselves are observations but have been stored as varialbes/columns. You can tell that the months are observations because as you go through time, the month changes.
 
-According to tidy data principles and as is customary, we should represent observations in rows rather than columns. We will use the gather() function from the tidyr package, to gather the columns of mbta2. We will also Use the - operator to omit the mode column. We will call our new columns *month* and *thou_riders* (for "thousand riders") and assign the result to mbta3.
+According to tidy data principles and as is customary, we should represent observations in rows rather than columns. We will use the gather() function from the tidyr package, to gather the columns of mbta2. We will also Use the - operator to omit the *mode* column. We will call our new columns *month* and *thou_riders* (for "thousand riders") and assign the result to mbta3.
 
 ```{r}
 #view mbta2
 View(mbta2)
 
-# Gather columns of mbta2: mbta3. Leave out the mode column.
+# Gather columns of mbta2: mbta3. Leave out the *mode* column.
 mbta3<-gather(mbta2, month, thou_riders, -mode)
 
 # View the head of mbta3
@@ -154,3 +156,27 @@ head(mbta3)
 ```
 
 Gathering has placed observations in rows.
+
+### Spreading the columns
+
+Column names(variables) i.e *mode* are stored as rows rather than as columns.
+
+Viewing mbta3 shows that the *mode* themselves are column names (variable names) but have been stored as rows. You can tell that the *mode* are column names because as you go through time, the *mode* does not change.
+
+According to tidy data principles and as is customary, we should represent variables in a column. We will use the spread() function from the tidyr package, to spread the *mode* column across multiple columns each column representing a variable. We will spread it on the variable *thou_riders*.
+
+```{r}
+#view mbta3
+View(mbta3)
+
+# Spread the mode column of mbta3: mbta4. 
+mbta4<-spread(mbta3, mode, thou_riders)
+
+# View the head of mbta4
+head(mbta4)
+
+```
+
+Spreading has placed mode in columns.
+
+The data is now tidy.
