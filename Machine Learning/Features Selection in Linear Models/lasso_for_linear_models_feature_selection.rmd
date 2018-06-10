@@ -31,3 +31,93 @@ By default, glmnet() will perform Ridge or Lasso regression for an automatically
 2. Cv.glmnet: 
 cv.glmnet() performs cross-validation, by default 10-fold which can be adjusted using nfolds. A 10-fold CV will randomly divide your observations into 10 non-overlapping groups/folds of approx equal size. The first fold will be used for validation set and the model is fit on 9 folds. Bias Variance advantages is usually the motivation behind using such model validation methods. In the case of lasso and ridge models, CV helps choose the value of the tuning parameter lambda.
 The chosen optimal lamda/tuning parameter has corresponding non-zero coefficients of the important features/varialbes hence feature selection.
+
+# Fitting a lasso model with glmnet
+
+First of all we will load the required packages. 
+
+##Loading the required packages
+
+Load the required libraries.
+The ISLR package, contains the hitters data.
+
+```{r}
+library(glmnet)
+library(ISLR)
+library(tidyverse)
+```
+
+## Exlporing the data:Missing Values
+
+Check for and remove missing values and save the resulting dataframe as "Hitters_Without_NAS"
+
+```{r}
+#check the data types of individual features
+glimpse(Hitters)
+
+#summary Hitters
+summary(Hitters)
+
+#check for missing values
+anyNA(Hitters)# returns true, next we omit these NAs
+
+#omit rows with missing values
+Hitters_Without_NAS<-na.omit(Hitters)
+```
+
+## Formula parameters
+
+The glmnet package does not use the model formula anguage, therefore we are required to give it:
+
+1. a matrix x of predictors and 
+2. a response vector
+
+
+The model.matrix() function is particularly useful for creating x; not only does it produce a matrix corresponding to the 19 predictors but it also automatically transforms any qualitative variables into dummy variables.
+The latter property is important because glmnet() can only take numerical, quantitative inputs.
+
+```{r}
+x=model.matrix(Salary~.-1,data=Hitters_Without_NAS) 
+y=Hitters_Without_NAS$Salary
+
+```
+
+## Fit the lasso model using glmnet
+
+```{r}
+fit.lasso=glmnet(x,y,alpha=1)
+```
+
+## Explore the glmnet fit
+
+```{r}
+#returns the components of the fit
+names(fit.lasso)
+
+#returns a summary of the fit
+summary(fit.lasso)
+
+```
+
+## 1. Plot the glmnet fit
+
+A plot of the fit: Coefficients on y axis, log lamda on x axis
+Lamba is the shrinkage parameter
+
+```{r}
+plot(fit.lasso,xvar="lambda",label=TRUE)
+
+```
+
+## 2. Plot the glmnet fit
+
+A plot of the fit: Coefficients on y axis, deviance on x axis
+The deviance shows the percentage of deviance explained, (equivalent to r squared in case of regression).
+
+```{r}
+plot(fit.lasso,xvar="dev",label=TRUE)
+```
+
+NB: The higher the R squared the better.
+Fraction deviance or R squared increases with less heavily shrunk coefficients. 
+And towards the end, with a relatively small increase in r squared from between 0.4 and 0.5, coefficients grow very large. This may be an indication that the end of the path is overfitting. Hence we need to know when to stop the shrinkage i.e the optimal lambda.
