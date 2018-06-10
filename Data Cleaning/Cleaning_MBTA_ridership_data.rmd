@@ -81,29 +81,38 @@ glimpse(mbta)
 # View the first 6 rows of mbta
 head(mbta)
 
+# View the entire data set or View(mbta)
+fix(mbta)
+
 # View a summary of mbta
 summary(mbta)
 ```
 
 The following issues have arised from exploring the data:
 
-1. There is a unecessary column. i.e the first column which lists the observations.
-2. There are unecessary rows:
+1. There is a unnecessary column. i.e the first column which lists the observations.
+2. There are unnecessary rows:
     + All Modes by Qtr row. This 1st row is a quarterly average of weekday MBTA ridership. Since this dataset tracks monthly average ridership, this row does not belong to this data frame. Furthermore, this explains why it has missing data.
     + Pct Chg / Yr row. This 7th row is not an observation but an analysis
     + TOTAL row. This 11th row is not an observation but an analysis. 
     
 3. There is missing data.
-    + There is missing data in All Modes by Qtr row. This dataset tracks monthly average ridership. However, this 1st row is a quarterly average of weekday MBTA ridership and this explains why it is has missing data.
+    + There is missing data in 'All Modes by Qtr' row. This dataset tracks monthly average ridership. However, this 1st row is a quarterly average of weekday MBTA ridership and this explains why it is has missing data.
 4. observations(values) are stored as columns rather than as rows.
 
 # Cleaning the data
 In this section we are going to deal with the above data quality issues.
 
-## 1. Removing the unecessary column
+## 1. Removing the unnecessary column
 ```{r}
 # Remove the first column of mbta and save the new data frame as mbta1
 mbta1<-mbta[, -1]
 
 ```
 
+## 2. Removing the unnecessary rows
+
+```{r}
+# Remove rows 1, 7, and 11 of mbta: mbta2
+mbta2<-mbta1[-c(1,7,11),]
+```
