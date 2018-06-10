@@ -121,3 +121,56 @@ plot(fit.lasso,xvar="dev",label=TRUE)
 NB: The higher the R squared the better.
 Fraction deviance or R squared increases with less heavily shrunk coefficients. 
 And towards the end, with a relatively small increase in r squared from between 0.4 and 0.5, coefficients grow very large. This may be an indication that the end of the path is overfitting. Hence we need to know when to stop the shrinkage i.e the optimal lambda.
+
+# Cv.glmnet for Model Selection
+
+This section shows how to do model selection with the built-in cross validation procedure.
+
+## Fit a lasso model with cv.glmnet
+
+```{r}
+#inbuilt cross validation procedure
+cv.lasso=cv.glmnet(x,y, alpha=1)
+```
+
+## Explore the cross-validated lasso model
+
+```{r}
+#showing what cv.lasso contains
+names(cv.lasso)
+
+#showing the summary
+summary(cv.lasso)
+```
+
+
+## Plot the cross-validated lasso model
+
+Lets plot our cross-validated lasso model. We will plot mse against log lamda in order to see the distribution of the mean squared error with change in lamda.
+
+```{r}
+#plotting the mse against log lamda
+plot(cv.lasso)
+
+```
+
+## Extracting the selected features(coefficients)
+
+There's a coefficient function extractor that works on a cross validation object and pick the coefficient vector corresponding to the best model.
+
+lambda.min is the value of λ that gives minimum mean cross-validated error. The other λ saved is lambda.1se, which gives the most regularized model such that error is within one standard error of the minimum.
+
+We will chose the model whose error is no more than one standard error above the error of the best model, it is suggested in several places using the 1 SE rule for general cross-validation use. The main point of the 1 SE rule, with which we agree, is to choose the simplest model whose accuracy is comparable with the best model.
+
+```{r}
+# returns the coefficient vector corresponding to the best model.
+coef(cv.lasso, s = "lambda.min")
+
+# returns the coefficient vector corresponding to the model whose error is no more than one standard error above the error of the best model.
+coef(cv.lasso, s = "lambda.1se")
+
+# returns the coefficient vector corresponding to the model whose error is no more than one standard error above the error of the best model.
+coef(cv.lasso)
+```
+
+The output above has 6 non-zero coefficients which shows that the function has chosen the second vertical second line on the cross-validation plot (within one standard error of the minimum) because cross validation error is measured with some variance.
