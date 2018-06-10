@@ -16,6 +16,13 @@ output:
 # .
 
 # Introduction
+There are three types of feature selection methods in general:
+
+1. Filter Methods : filter methods are generally used as a preprocessing step. The selection of features is independent of any machine learning algorithm. Instead the features are selected on the basis of their scores in various statistical tests for their correlation with the outcome variable. Some common filter methods are Correlation metrics (Pearson, Spearman, Distance), Chi-Squared test, Anova, Fisher's Score etc.
+
+2. Wrapper Methods : in wrapper methods, you try to use a subset of features and train a model using them. Based on the inferences that you draw from the previous model, you decide to add or remove features from the subset. Forward Selection, Backward elimination are some of the examples for wrapper methods.
+
+3. Embedded Methods : these are the algorithms that have their own built-in feature selection methods. LASSO regression is one such example.
 
 The lasso does:
 
@@ -177,10 +184,8 @@ The output above has 6 non-zero coefficients which shows that the function has c
 
 # Conclusion
 
-The lasso is a very good algorithm for selecting the best features from a data set with many features. These best features can be used to fit other linear models or the lasso itself for best perfomance. NB: With the lasso:
+The lasso is a very good algorithm for selecting the best features from a data set with many features. These best features can be used to fit other linear models. In the case of lasso:
 
 1. One can fit the model with glmnet plus all the features but use the chosen lamda.1se which will automatically shrink the coefficients of the un important features, hence automatic feature selection.
 
 2. One can use cv.glmnet directly with all the features, lamda and features are selected automatically. This is the preferred option.
-
-The next post will be about feature selection for non-linear data.
