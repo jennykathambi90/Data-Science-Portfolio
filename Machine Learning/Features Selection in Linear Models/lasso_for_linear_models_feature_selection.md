@@ -306,12 +306,12 @@ summary(cv.lasso)
 
 ```
 ##            Length Class  Mode     
-## lambda     74     -none- numeric  
-## cvm        74     -none- numeric  
-## cvsd       74     -none- numeric  
-## cvup       74     -none- numeric  
-## cvlo       74     -none- numeric  
-## nzero      74     -none- numeric  
+## lambda     75     -none- numeric  
+## cvm        75     -none- numeric  
+## cvsd       75     -none- numeric  
+## cvup       75     -none- numeric  
+## cvlo       75     -none- numeric  
+## nzero      75     -none- numeric  
 ## name        1     -none- character
 ## glmnet.fit 12     elnet  list     
 ## lambda.min  1     -none- numeric  
@@ -347,28 +347,28 @@ coef(cv.lasso, s = "lambda.min")
 
 ```
 ## 21 x 1 sparse Matrix of class "dgCMatrix"
-##                       1
-## (Intercept)  37.2911545
-## AtBat         .        
-## Hits          1.7977038
-## HmRun         .        
-## Runs          .        
-## RBI           .        
-## Walks         2.1209558
-## Years         .        
-## CAtBat        .        
-## CHits         .        
-## CHmRun        .        
-## CRuns         0.2002533
-## CRBI          0.4006813
-## CWalks        .        
-## LeagueA       .        
-## LeagueN       .        
-## DivisionW   -88.7202470
-## PutOuts       0.1997332
-## Assists       .        
-## Errors        .        
-## NewLeagueN    .
+##                         1
+## (Intercept)  1.558172e+02
+## AtBat       -1.547343e+00
+## Hits         5.660897e+00
+## HmRun        .           
+## Runs         .           
+## RBI          .           
+## Walks        4.729691e+00
+## Years       -9.595837e+00
+## CAtBat       .           
+## CHits        .           
+## CHmRun       5.108207e-01
+## CRuns        6.594856e-01
+## CRBI         3.927505e-01
+## CWalks      -5.291586e-01
+## LeagueA     -3.206508e+01
+## LeagueN      3.479895e-12
+## DivisionW   -1.192990e+02
+## PutOuts      2.724045e-01
+## Assists      1.732025e-01
+## Errors      -2.058508e+00
+## NewLeagueN   .
 ```
 
 ```r
@@ -378,27 +378,27 @@ coef(cv.lasso, s = "lambda.1se")
 
 ```
 ## 21 x 1 sparse Matrix of class "dgCMatrix"
-##                       1
-## (Intercept) 251.4491563
-## AtBat         .        
-## Hits          1.0036044
-## HmRun         .        
-## Runs          .        
-## RBI           .        
-## Walks         0.9857987
-## Years         .        
-## CAtBat        .        
-## CHits         .        
-## CHmRun        .        
-## CRuns         0.1094218
-## CRBI          0.2911570
-## CWalks        .        
-## LeagueA       .        
-## LeagueN       .        
-## DivisionW     .        
-## PutOuts       .        
-## Assists       .        
-## Errors        .        
+##                        1
+## (Intercept) 127.95694754
+## AtBat         .         
+## Hits          1.42342566
+## HmRun         .         
+## Runs          .         
+## RBI           .         
+## Walks         1.58214111
+## Years         .         
+## CAtBat        .         
+## CHits         .         
+## CHmRun        .         
+## CRuns         0.16027975
+## CRBI          0.33667715
+## CWalks        .         
+## LeagueA       .         
+## LeagueN       .         
+## DivisionW    -8.06171262
+## PutOuts       0.08393604
+## Assists       .         
+## Errors        .         
 ## NewLeagueN    .
 ```
 
@@ -409,27 +409,27 @@ coef(cv.lasso)
 
 ```
 ## 21 x 1 sparse Matrix of class "dgCMatrix"
-##                       1
-## (Intercept) 251.4491563
-## AtBat         .        
-## Hits          1.0036044
-## HmRun         .        
-## Runs          .        
-## RBI           .        
-## Walks         0.9857987
-## Years         .        
-## CAtBat        .        
-## CHits         .        
-## CHmRun        .        
-## CRuns         0.1094218
-## CRBI          0.2911570
-## CWalks        .        
-## LeagueA       .        
-## LeagueN       .        
-## DivisionW     .        
-## PutOuts       .        
-## Assists       .        
-## Errors        .        
+##                        1
+## (Intercept) 127.95694754
+## AtBat         .         
+## Hits          1.42342566
+## HmRun         .         
+## Runs          .         
+## RBI           .         
+## Walks         1.58214111
+## Years         .         
+## CAtBat        .         
+## CHits         .         
+## CHmRun        .         
+## CRuns         0.16027975
+## CRBI          0.33667715
+## CWalks        .         
+## LeagueA       .         
+## LeagueN       .         
+## DivisionW    -8.06171262
+## PutOuts       0.08393604
+## Assists       .         
+## Errors        .         
 ## NewLeagueN    .
 ```
 
