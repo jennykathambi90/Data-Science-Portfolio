@@ -1,0 +1,32 @@
+---
+title: "Feature Selection for Linear Models using LASSO"
+author: "Jane Kathambi"
+date: "8 June 2018"
+output: 
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+
+# .
+
+# Introduction
+There are three types of feature selection methods in general:
+
+1. Filter Methods : filter methods are generally used as a preprocessing step. The selection of features is independent of any machine learning algorithm. Instead the features are selected on the basis of their scores in various statistical tests for their correlation with the outcome variable. Some common filter methods are Correlation metrics (Pearson, Spearman, Distance), Chi-Squared test, Anova, Fisher's Score etc.
+
+2. Wrapper Methods : in wrapper methods, you try to use a subset of features and train a model using them. Based on the inferences that you draw from the previous model, you decide to add or remove features from the subset. Forward Selection, Backward elimination are some of the examples for wrapper methods.
+
+3. Embedded Methods : these are the algorithms that have their own built-in feature selection methods. LASSO regression is one such example.
+
+# Feature selection using lasso, boosting and random forest
+I will do feature selection using lasso, boosting and random forest algorithms. I will implement these using packages namely glmnet, xgboost and ranger.
+
+**Glmnet** is a package that fits a generalized linear model via penalized maximum likelihood. The regularization path is computed for the lasso or elasticnet penalty at a grid of values for the regularization parameter lambda. It fits linear, logistic, multinomial, poisson, and Cox regression models. The elastic-net penalty is controlled by α, and bridges the gap between lasso (α = 1, the default) and ridge (α = 0). The tuning parameter λ controls the overall strength of the penalty. It is known that the ridge penalty shrinks the coefficients of correlated predictors towards each other while the lasso tends to pick one of them and discard the others. The elastic-net penalty mixes these two.
+
+In the FeatureSelection-wrapper package, it’s recommended that α is set to 1 i.e lasso, because the main purpose is to keep the important predictors and remove all others. This is particularly useful in case of **high-dimensional data** or in **data including many correlated predictors**. 

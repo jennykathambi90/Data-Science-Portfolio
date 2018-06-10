@@ -16,6 +16,13 @@ output:
 # .
 
 # Introduction
+There are three types of feature selection methods in general:
+
+1. Filter Methods : filter methods are generally used as a preprocessing step. The selection of features is independent of any machine learning algorithm. Instead the features are selected on the basis of their scores in various statistical tests for their correlation with the outcome variable. Some common filter methods are Correlation metrics (Pearson, Spearman, Distance), Chi-Squared test, Anova, Fisher's Score etc.
+
+2. Wrapper Methods : in wrapper methods, you try to use a subset of features and train a model using them. Based on the inferences that you draw from the previous model, you decide to add or remove features from the subset. Forward Selection, Backward elimination are some of the examples for wrapper methods.
+
+3. Embedded Methods : these are the algorithms that have their own built-in feature selection methods. LASSO regression is one such example.
 
 The lasso does:
 
@@ -340,28 +347,28 @@ coef(cv.lasso, s = "lambda.min")
 
 ```
 ## 21 x 1 sparse Matrix of class "dgCMatrix"
-##                         1
-## (Intercept)  1.728979e+02
-## AtBat       -1.734125e+00
-## Hits         6.059861e+00
-## HmRun        1.708102e-01
-## Runs         .           
-## RBI          .           
-## Walks        5.053826e+00
-## Years       -1.061379e+01
-## CAtBat      -2.483638e-05
-## CHits        .           
-## CHmRun       5.721414e-01
-## CRuns        7.218106e-01
-## CRBI         3.856339e-01
-## CWalks      -6.033666e-01
-## LeagueA     -3.339735e+01
-## LeagueN      4.055705e-12
-## DivisionW   -1.193924e+02
-## PutOuts      2.772560e-01
-## Assists      2.104828e-01
-## Errors      -2.371468e+00
-## NewLeagueN   .
+##                       1
+## (Intercept)  37.2911545
+## AtBat         .        
+## Hits          1.7977038
+## HmRun         .        
+## Runs          .        
+## RBI           .        
+## Walks         2.1209558
+## Years         .        
+## CAtBat        .        
+## CHits         .        
+## CHmRun        .        
+## CRuns         0.2002533
+## CRBI          0.4006813
+## CWalks        .        
+## LeagueA       .        
+## LeagueN       .        
+## DivisionW   -88.7202470
+## PutOuts       0.1997332
+## Assists       .        
+## Errors        .        
+## NewLeagueN    .
 ```
 
 ```r
@@ -430,10 +437,8 @@ The output above has 6 non-zero coefficients which shows that the function has c
 
 # Conclusion
 
-The lasso is a very good algorithm for selecting the best features from a data set with many features. These best features can be used to fit other linear models or the lasso itself for best perfomance. NB: With the lasso:
+The lasso is a very good algorithm for selecting the best features from a data set with many features. These best features can be used to fit other linear models. In the case of lasso:
 
 1. One can fit the model with glmnet plus all the features but use the chosen lamda.1se which will automatically shrink the coefficients of the un important features, hence automatic feature selection.
 
 2. One can use cv.glmnet directly with all the features, lamda and features are selected automatically. This is the preferred option.
-
-The next post will be about feature selection for non-linear data.
