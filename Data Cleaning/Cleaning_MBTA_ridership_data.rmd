@@ -22,6 +22,18 @@ We are going to clean this data step by step.
 
 The dataset is stored as an Excel spreadsheet called mbta.xlsx in the data folder that is inside the data cleaning folder. We will use the read_excel() function from Hadley Wickham's readxl package to import it.
 
-In most cases excel spreadhseets have some rows that need to be skipped e.g a title. However, the first time one imports a dataset, they might not know how many rows need to be skipped. So one needs to import the data and explore the first few rows, identify the ones that need to be omiited and omit them and save the resulting data frame to a new name. If one knows how many rows to skip then they can go ahead and skip them while importing. 
+In most cases excel spreadhseets have some rows that need to be skipped e.g a title. However, the first time one imports a dataset, they might not know how many rows need to be skipped. So one needs to import the data and explore the first few rows, identify the ones that need to be ommited and omit them and save the resulting data frame to a new name. If one knows how many rows to skip then they can go ahead and skip them while importing. 
 
-Go to the data folder and open the excel file. You will realise that the first row is a title row which meed to be skipped while importing.
+
+# Loading the required packages
+We will import the excel data using the readxl package. We will require tidyr for data cleaning contained in the tidyverse package
+
+```{r}
+#Load the readxl library
+library(readxl)
+
+#Load the tidyverse library
+library(tidyverse)
+
+```
+
