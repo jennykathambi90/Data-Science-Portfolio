@@ -97,3 +97,13 @@ The following issues have arised from exploring the data:
     + There is missing data in All Modes by Qtr row. This dataset tracks monthly average ridership. However, this 1st row is a quarterly average of weekday MBTA ridership and this explains why it is has missing data.
 4. observations(values) are stored as columns rather than as rows.
 
+# Cleaning the data
+In this section we are going to deal with the above data quality issues.
+
+## 1. Removing the unecessary column
+```{r}
+# Remove the first column of mbta and save the new data frame as mbta1
+mbta1<-mbta[, -1]
+
+```
+
