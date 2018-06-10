@@ -211,3 +211,7 @@ summary(mbta4)
 #### Observed issues with our tidy data
 
 From the above explorations it is evident that all the data types are wrong. All columns except the month column should be numeric and the month column itself should be in the date format. With this in mind, the summary script ain't even necessary as it will give erroneous results.
+
+### Type conversion 
+
+We will do type conversions for all the columns. For the month column we will use the lubridate package and for the other columns we will apply coersions.
