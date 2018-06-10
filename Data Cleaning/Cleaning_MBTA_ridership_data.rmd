@@ -30,15 +30,16 @@ We are going to clean this data step by step as shown below:
 
 We will use tidyr functions which include:
 
-* **Spread:** If values are stored as column names instead of being values, spread them into key-value pairs
-* **Gather:** If column names are stored as values (instead of being column names), gather them into Key-Value Pairs.
+* **Spread:** If column names are stored a sobservations spread them into key-value pairs
+* **Gather:** If observations are stored as column names gather them into Key-Value Pairs.
 * **Unite** to unite multiple columns into one column.
-* **Separate** to separateone column into multiple columns
+* **Separate** to separate one column into multiple columns
 
 3. **Prepare the data for analysis.** We will make sure that:
 
-    + Dates are well formatted. We will use lubridate and stringr if necessary
-    + Column types are correct. We will use coersions.
+    + Variables are of the correct data type
+        + Dates are well formatted. We will use lubridate.
+        + Column types are correct. We will use coersions.
     + Missing values are dealt with
     + Extreme values are dealt with
     + Unexpected values are dealt with
@@ -180,3 +181,13 @@ head(mbta4)
 Spreading has placed mode in columns.
 
 The data is now tidy!!!
+
+## Preparing the data for analysis.We will make sure that:
+
+    + Variables are of the correct data type.
+        + Dates are well formatted. We will use lubridate.
+        + Column types are correct. We will use coersions.
+    + Extreme values are dealt with.
+    + Unexpected values are dealt with.
+
+Before we begin let us explore our  tidy data set.
