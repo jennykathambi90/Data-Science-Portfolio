@@ -58,7 +58,7 @@ We will import the excel data using the readxl package. We will require tidyr fo
 library(readxl)
 
 #Load the tidyverse library
-library(tidyr)
+library(tidyverse)
 
 ```
 
@@ -73,6 +73,7 @@ mbta<-read_excel("data/mbta.xlsx", skip=1)
 ```
 
 # Exploring the data
+
 Lets check out how the data is. We do this having the three principles of tidy data in mind.
 ```{r}
 # View the structure of mbta
@@ -98,15 +99,21 @@ The following issues have arised from exploring the data:
     
 3. There is missing data.
     + There is missing data in 'All Modes by Qtr' row. This dataset tracks monthly average ridership. However, this 1st row is a quarterly average of weekday MBTA ridership and this explains why it is has missing data.
-4. observations(values) are stored as columns rather than as rows.
+4. Observations(values) are stored as columns rather than as rows.
+5. Column names(variables) are stored as rows rather than as columns.
 
 # Cleaning the data
+
 In this section we are going to deal with the above data quality issues.
 
 ## 1. Removing the unnecessary column
+
 ```{r}
 # Remove the first column of mbta and save the new data frame as mbta1
 mbta1<-mbta[, -1]
+
+#view the changes
+head(mbta1)
 
 ```
 
@@ -115,9 +122,35 @@ mbta1<-mbta[, -1]
 ```{r}
 # Remove rows 1, 7, and 11 of mbta: mbta2
 mbta2<-mbta1[-c(1,7,11),]
+
+# view the changes
+View(mbta2)
 ```
 
 ## 3. Dealing with the missing data
+
 There is missing data in 'All Modes by Qtr' row. This dataset tracks monthly average ridership. However, this 1st row is a quarterly average of weekday MBTA ridership and this explains why it is has missing data.
 
 We have already removed this row as a unnecessary row.
+
+## 4. Gathering the columns
+
+Observations(values) are stored as columns rather than as rows.
+
+Viewing mbta2 shows that the months themselves are observations but have been stored as varialbes/columns. You can tell that the months are observations because as you go through time, the month changes.
+
+According to tidy data principles and as is customary, we should represent observations in rows rather than columns. We will use the gather() function from the tidyr package, to gather the columns of mbta2. We will also Use the - operator to omit the mode column. We will call our new columns *month* and *thou_riders* (for "thousand riders") and assign the result to mbta3.
+
+```{r}
+#view mbta2
+View(mbta2)
+
+# Gather columns of mbta2: mbta3. Leave out the mode column.
+mbta3<-gather(mbta2, month, thou_riders, -mode)
+
+# View the head of mbta3
+head(mbta3)
+
+```
+
+Gathering has placed observations in rows.
