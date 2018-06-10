@@ -116,3 +116,8 @@ mbta1<-mbta[, -1]
 # Remove rows 1, 7, and 11 of mbta: mbta2
 mbta2<-mbta1[-c(1,7,11),]
 ```
+
+## 3. Dealing with the missing data
+There is missing data in 'All Modes by Qtr' row. This dataset tracks monthly average ridership. However, this 1st row is a quarterly average of weekday MBTA ridership and this explains why it is has missing data.
+
+We have already removed this row as a unnecessary row.
