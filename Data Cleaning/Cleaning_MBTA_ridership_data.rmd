@@ -16,6 +16,7 @@ output:
 # .
 
 # Introduction
+
 The Massachusetts Bay Transportation Authority ("MBTA" or just "the T" for short) manages America's oldest subway, as well as Greater Boston's commuter rail, ferry, and bus systems.
 
 We are going to clean this data step by step.
@@ -26,6 +27,7 @@ In most cases excel spreadhseets have some rows that need to be skipped e.g a ti
 
 
 # Loading the required packages
+
 We will import the excel data using the readxl package. We will require tidyr for data cleaning contained in the tidyverse package
 
 ```{r}
@@ -34,6 +36,16 @@ library(readxl)
 
 #Load the tidyverse library
 library(tidyverse)
+
+```
+
+# Importing the data
+
+Go to the data folder and open the excel file. You will realise that the first row is a title row which need to be skipped while importing.
+
+```{r}
+# Import mbta.xlsx and skip first row. Save the resulting data frame as mbta.
+mbta<-read_excel("data/mbta.xlsx", skip=1)
 
 ```
 
