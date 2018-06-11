@@ -103,3 +103,58 @@ contab<-table(comics$align,comics$gender)
 contab
 ```
 
+## Dropping levels
+
+The contingency table revealed that there are some levels that have very low counts. To simplify the analysis, it often helps to drop such levels.
+
+In R, this requires two steps: 
+  
+  1. first filtering out any rows with the levels that have very low counts, then 2. removing these levels from the factor variable with droplevels(). This is because the droplevels() function would keep levels that have just 1 or 2 counts; it only drops levels that don't exist in a dataset.
+
+### Explore the levels to find out which ones have the lowest entries.
+
+Let us print contab to find out which level of align has the fewest total entries.
+```{r}
+#print contab
+contab
+```
+
+From the above coningency level it is the _**"reformed criminals level"**_ which has the fewest total entries.
+
+### Dropping the levels that have the lowest entries.
+Use filter() to filter out all rows of comics with that level, then drop the unused level with droplevels(). Save the simplifed dataset over the old one as comics.
+
+```{r}
+# Load dplyr. We have already loaded it.
+
+# Remove "Reformed Criminals" level of the align variable
+comics <- comics %>%
+filter(align != "Reformed Criminals") %>%
+droplevels()
+
+```
+
+Confirm that the _**"reformed criminals level"**_ has been dropped using the contingency table as show below:
+
+```{r}
+# Create a 2-way contingency table: contab
+contab<-table(comics$align,comics$gender)
+
+#show contab
+contab
+
+```
+
+
+The _**"reformed criminals level"**_ has been dropped.
+
+
+
+
+
+
+
+
+
+
+
