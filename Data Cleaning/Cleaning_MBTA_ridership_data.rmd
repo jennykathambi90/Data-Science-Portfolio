@@ -215,3 +215,14 @@ From the above explorations it is evident that all the data types are wrong. All
 ### Type conversion 
 
 We will do type conversions for all the columns. For the month column we will use the lubridate package and for the other columns we will apply coersions.
+
+#### Converting all the columns except month to numeric
+We will convert all the columns except month to numeric since their values are of type numeric.
+```{r}
+cols_to_change = c(2:9)
+for(i in cols_to_change){
+   class(mbta4[, i]) = "numeric"
+}
+glimpse(mbta4)
+```
+
