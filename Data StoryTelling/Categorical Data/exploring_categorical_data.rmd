@@ -90,7 +90,7 @@ levels(comics$align)
 levels(comics$gender)
 ```
 
-## The contingency table
+## The alignment gender contingency table
 As said earlier a contingency table is a useful way to represent the total counts of observations that fall into each combination of the levels of categorical variables.
 
 We will show the cotingency table of comics alignment versus gender. Save it as contab.
