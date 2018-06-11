@@ -47,9 +47,9 @@ Classical techniques serve as the **probabilistic foundation** of science and en
 Classical estimation techniques have the characteristic of taking all of the data and mapping the data into a few numbers ("estimates"). This is both a virtue and a vice. The virtue is that these few numbers focus on important characteristics (location, variation, etc.) of the population. The vice is that concentrating on these few characteristics can **filter out other characteristics (skewness, tail length, autocorrelation, etc.) of the same population. In this sense there is a loss of information due to this "filtering" process**. | The EDA approach, on the other hand, often makes use of (and shows) all of the available data. In this sense there is **no corresponding loss of information**.
 classical tests **depend on underlying assumptions** (e.g., normality), and hence the validity of the test conclusions becomes dependent on the validity of the underlying assumptions. Worse yet, the exact underlying assumptions may be unknown to the analyst, or if known, untested. | Many EDA techniques make **little or no assumptions--they present and show the data--all of the data--as is, with fewer encumbering assumptions**
 
-With that in mind let us now dive into EDA of Categorical Data. Remember that EDA is graphical and bar charts are good for categorical data. We can also use contingency tables. A contingency table is a table showing the distribution of one variable in rows and another in columns, used to study the correlation between the two variables. 
+With that in mind let us now dive into EDA of Categorical Data. Remember that EDA is graphical and bar charts are good for categorical data. We can also use contingency tables. A contingency table is a table showing the distribution of one variable in rows and another in columns, used to study the correlation between the two variables. It is a useful way to represent the total counts of observations that fall into each combination of the levels of categorical variables.
 
-We will work with the comics data set.
+We will work with the comics data set.This is a collection of characteristics on all of the superheroes created by Marvel and DC comics in the last 80 years.
 
 # Loading the Required Libraries
 
@@ -57,7 +57,7 @@ Let us load the required libraries
 
 ```{r}
 library(ggplot2)
-library(tidyverse)
+library(dplyr)
 ```
 
 # Loading the comics data
@@ -66,4 +66,26 @@ We will use read.csv() of the utils package i.e base r package.
 
 ```{r}
 comics<-read.csv("data/comics.csv")
+```
+
+
+# EDA of the Comics dataset
+
+## Initial exploration of the comics data set
+
+```{r}
+# Print the first rows of the data
+comics
+
+#view the variable names of comics
+names(comics)
+
+#view the internal structure of comics
+glimpse(comics)
+
+# Check levels of align
+levels(comics$align)
+
+# Check the levels of gender
+levels(comics$gender)
 ```
