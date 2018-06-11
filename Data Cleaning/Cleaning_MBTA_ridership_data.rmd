@@ -393,8 +393,9 @@ ggplot(mbta3_modified_boat, aes(x = month, y = thou_riders, col = mode )) + geom
 
 ```
 
+# Conclusion
 
-
+Data cleaning is the most important part of data analysis as clean data will most of the time give the correct insights. To be highly skilled in data cleaning, one is required to clean different data sets as you will find that  different data sets have different data cleaning requirements.
 
 
 
