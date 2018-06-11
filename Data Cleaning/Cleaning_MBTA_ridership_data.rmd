@@ -38,7 +38,7 @@ We will use tidyr functions which include:
 3. **Prepare the data for analysis.** We will make sure that:
 
     + Variables are of the correct data type
-        + Dates are well formatted. We will use lubridate.
+        + Dates are well formatted. Use lubridate or zoo package.
         + Column types are correct. We will use coersions.
     + Missing values are dealt with
     + Extreme values are dealt with
@@ -185,7 +185,7 @@ The data is now tidy!!!
 ## Preparing the data for analysis.We will make sure that:
 
     + Variables are of the correct data type.
-        + Dates are well formatted. We will use lubridate.
+        + Dates are well formatted. We will use the zoo package since the lubridate package does not have a year-month version.
         + Column types are correct. We will use coersions.
     + Extreme values are dealt with.
     + Unexpected values are dealt with.
@@ -214,15 +214,30 @@ From the above explorations it is evident that all the data types are wrong. All
 
 ### Type conversion 
 
-We will do type conversions for all the columns. For the month column we will use the lubridate package and for the other columns we will apply coersions.
+We will do type conversions for all the columns. For the month column We will use the zoo package since the lubridate package does not have a year-month version. Anf for the other columns we will apply coersions.
 
-#### Converting all the columns except month to numeric
+#### Converting all the columns except date column i.e month to numeric
 We will convert all the columns except month to numeric since their values are of type numeric.
 ```{r}
 cols_to_change = c(2:9)
 for(i in cols_to_change){
-   class(mbta4[, i]) = "numeric"
+ class(mbta4[, i]) = "numeric"
 }
 glimpse(mbta4)
 ```
 
+#### Converting dates
+The month column has year concatenated with month,but no day. I will use the zoo package since the lubridate package does not have a year-month version.
+```{r}
+#Loading the zoo package
+library(zoo)
+
+#Let us view the day format
+head(mbta4$month)# It is in the format year-month i.e "2007-03"
+
+#converting the month column into date
+mbta4$month<-as.yearmon(mbta4$month,"%Y-%m") 
+
+#vewing the str of mbta4
+glimpse(mbta4)
+```
