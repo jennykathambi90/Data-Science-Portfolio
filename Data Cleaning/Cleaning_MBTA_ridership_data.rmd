@@ -18,7 +18,9 @@ output:
 # Introduction
 The Massachusetts Bay Transportation Authority ("MBTA" or just "the T" for short) manages America's oldest subway, as well as Greater Boston's commuter rail, ferry, and bus systems.
 
-We are going to clean this data step by step as shown below:
+We will clean the data and do some visualizations there after.
+
+We are going to clean this data using the following guidelines:
 
 1. **Understand the structure of the data.**
     + Look at the data strucutre and remove any unecessary data.
@@ -61,6 +63,11 @@ library(readxl)
 #Load the tidyverse library
 library(tidyverse)
 
+#Load the ggplot2 package
+library(ggplot2)
+
+#Load library stringr
+library(stringr)
 ```
 
 # Importing the data
@@ -328,5 +335,83 @@ hist(mbta6$Boat)
 ```
 
 Phew the outlier has been modified to the correct value as show by the above histogram.
+
+# Visualizing different versions of the data
+
+The purpose of this section is to emphasize on the use of different data formats for different purposes analytics and visualization purposes. This is why we kept on saving data with different names at every stage of the data cleaning process.
+
+We will now use the long version of the data named , **mbta3**, to produce some cool ridership plots: 
+
+1. One showing all modes of transport.
+2. One showing the lesser-used modes of transport (take a look at the gorgeous seasonal variation in Boat ridership), and 
+ 
+
+_**NB: The plots are based on the long version of the data we produced named mbta3 -- a good example of using different data formats for different purposes.**_
+
+Let us begin with the first plot that shows that shows all modes of transport.
+We will use the long version of the data named , **mbta3**, to produce this plot. Let us see how this data is formatted first, then format further if necessary after which we will plot it.
+
+```{r}
+#checking out the format of mbta4
+head(mbta3)
+
+#We will do a few modifications to this data and save it as mbta3_modified_all
+
+#create mbta3_modified_all as a copy of mbta3
+mbta3_modified_all<- mbta3
+
+# Remove the "-" from month column, so that putting breaks at x axis work
+mbta3_modified_all$month<-str_remove(mbta3_modified_all$month, "-")
+
+#Convert month and mode to factors
+mbta3_modified_all$month<- as.factor(mbta3_modified_all$month)
+mbta3_modified_all$mode<- as.factor(mbta3_modified_all$mode)
+
+#convert thou_riders to numeric
+mbta3_modified_all$thou_riders<- as.numeric(mbta3_modified_all$thou_riders)
+
+# Look at all T ridership over time
+ggplot(mbta3_modified_all, aes(x = month, y = thou_riders, col = mode)) +  geom_point() + 
+  scale_x_discrete(name = "Month", breaks = c(200701, 200801, 200901, 201001, 201101)) + 
+  scale_y_continuous(name = "Avg Weekday Ridership (thousands)")
+
+```
+
+
+Let us do the second plot that shows the lesser-used modes of transport (take a look at the gorgeous seasonal variation in Boat ridership)
+
+We are going to create *mbta3_modified_boat* data frame from *mbta3_modified_all* data frame. *mbta3_modified_boat* will only have two modes i.e *Boat* and *Trackless Trolley*.
+
+```{r}
+#mbta3_modified_boat with only two modes :Boat and Trackless Trolley.
+mbta3_modified_boat<-mbta3_modified_all[mbta3_modified_all$mode==c("Boat","Trackless Trolley"),]
+
+# Look at Boat and Trackless Trolley ridership over time
+ggplot(mbta3_modified_boat, aes(x = month, y = thou_riders, col = mode )) + geom_point() + 
+  scale_x_discrete(name = "Month", breaks = c(200701, 200801, 200901, 201001, 201101)) +  
+  scale_y_continuous(name = "Avg Weekday Ridership (thousands)")
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
