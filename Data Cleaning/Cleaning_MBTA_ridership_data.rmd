@@ -217,6 +217,7 @@ From the above explorations it is evident that all the data types are wrong. All
 We will do type conversions for all the columns. For the month column We will use the zoo package since the lubridate package does not have a year-month version. Anf for the other columns we will apply coersions.
 
 #### Converting all the columns except date column i.e month to numeric
+
 We will convert all the columns except month to numeric since their values are of type numeric.
 ```{r}
 cols_to_change = c(2:9)
@@ -227,6 +228,7 @@ glimpse(mbta4)
 ```
 
 #### Converting dates
+
 The month column has year concatenated with month,but no day. I will use the zoo package since the lubridate package does not have a year-month version.
 ```{r}
 #Loading the zoo package
@@ -242,7 +244,12 @@ mbta4$month<-as.yearmon(mbta4$month,"%Y-%m")
 glimpse(mbta4)
 ```
 
-## Separating the month column into new columns month and year
+### Dealing with the converted dates
+
+Let us take a closer look at our dates.
+
+#### Separating the month column into new columns month and year
+
 Our dataset is already looking much better! If we wanted to to do an analysis of the T's ridership during certain months across all years, it would be a piece of cake because our dataset has month names in it.
 However, there's only one small problem: if we want to look at ridership on the T during every January (for example), the month and year are together in the same column, which makes it a little tricky.
 
@@ -259,7 +266,8 @@ mbta5<-separate(mbta4, month, c("month", "year"), sep=" ")
 head(mbta5)
 ```
 
-## Reordering Columns: year should come before month
+#### Reordering Columns: year should come before month
+
 Viewing mbta5 shows that month comes before year yet conventionally it should be the other way round. Let us now reorder the columns
 
 ```{r}
@@ -271,16 +279,54 @@ mbta6<-mbta5[,c(2, 1, 3:9)]
 head(mbta6)
 ```
 
+### Dealing with obvious mistakes and/or outliers
 
+Before you write up any analysis, it's a good idea to screen the data for any obvious mistakes and/or outliers.
 
+There are many valid exploratory techniques for doing this; we will use a couple of them here which include:
 
++ Summary
++ Histogram
++ Box plot
++ Scatter plot
 
+```{r}
+# View a summary of mbta6
+summary(mbta6)
 
+```
 
+The above summary shows that the Boat column has an outlier which is also an obvious error.
 
+This error is the maximum value which is 40. Looking at the distribution of the data i.e min,median and mean it is evident that number 40 is a typo with a zero added afetr 4 hence an obious error.
 
+Let's explore the boat column further.
 
+```{r}
+# Generate a histogram of Boat column
+hist(mbta6$Boat)
 
+```
 
+The above histogram is quite interesting – every value clustered around 4 and one loner out around 40.
+
+Every month, average weekday commuter boat ridership was on either side of four thousand. Then, one month it jumped to 40 thousand without warning?
+
+We can assume that whoever was entering the data that month accidentally typed 40 instead of 4.
+
+Because it's an error, we don't want this value influencing your analysis. So, we'll locate the incorrect value and change it to 4.
+
+```{r}
+# Find the row number of the incorrect value: i
+i<-which(mbta6$Boat==40)
+
+# Replace the incorrect value with 4
+mbta6$Boat[i]<-4
+
+# Generate a histogram of Boat column to verify that the change occurred
+hist(mbta6$Boat)
+```
+
+Phew the outlier has been modified to the correct value as show by the above histogram.
 
 
