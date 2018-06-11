@@ -242,7 +242,7 @@ mbta4$month<-as.yearmon(mbta4$month,"%Y-%m")
 glimpse(mbta4)
 ```
 
-## Separating the month column into month and year
+## Separating the month column into new columns month and year
 Our dataset is already looking much better! If we wanted to to do an analysis of the T's ridership during certain months across all years, it would be a piece of cake because our dataset has month names in it.
 However, there's only one small problem: if we want to look at ridership on the T during every January (for example), the month and year are together in the same column, which makes it a little tricky.
 
@@ -258,4 +258,29 @@ mbta5<-separate(mbta4, month, c("month", "year"), sep=" ")
 #Let us view the head of mbta5
 head(mbta5)
 ```
+
+## Reordering Columns: year should come before month
+Viewing mbta5 shows that month comes before year yet conventionally it should be the other way round. Let us now reorder the columns
+
+```{r}
+#Let us reorder the columns: year should come before month: mbta6 
+#We Will use indeces.
+mbta6<-mbta5[,c(2, 1, 3:9)]
+
+#let us view the head of mbta6
+head(mbta6)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
 
