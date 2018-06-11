@@ -89,3 +89,17 @@ levels(comics$align)
 # Check the levels of gender
 levels(comics$gender)
 ```
+
+## The contingency table
+As said earlier a contingency table is a useful way to represent the total counts of observations that fall into each combination of the levels of categorical variables.
+
+We will show the cotingency table of comics alignment versus gender. Save it as contab.
+
+```{r}
+# Create a 2-way contingency table: contab
+contab<-table(comics$align,comics$gender)
+
+#show contab
+contab
+```
+
