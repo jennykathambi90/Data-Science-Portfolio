@@ -241,3 +241,21 @@ mbta4$month<-as.yearmon(mbta4$month,"%Y-%m")
 #vewing the str of mbta4
 glimpse(mbta4)
 ```
+
+## Separating the month column into month and year
+Our dataset is already looking much better! If we wanted to to do an analysis of the T's ridership during certain months across all years, it would be a piece of cake because our dataset has month names in it.
+However, there's only one small problem: if we want to look at ridership on the T during every January (for example), the month and year are together in the same column, which makes it a little tricky.
+
+We are now going to separate the month column into distinct month and year columns to make life easier. We will use the tidyr separate columns function.
+
+```{r}
+#before splitting the month column first view the date format
+head(mbta4$month)
+
+# Split month column into month and year: mbta5
+mbta5<-separate(mbta4, month, c("month", "year"), sep=" ")
+
+#Let us view the head of mbta5
+head(mbta5)
+```
+
