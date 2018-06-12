@@ -52,7 +52,7 @@ classical tests **depend on underlying assumptions** (e.g., normality), and henc
 
 With that in mind let us now dive into EDA of Categorical Data. Remember that EDA is graphical and bar charts are good for categorical data. We can also use contingency tables. A contingency table is a table showing the distribution of one variable in rows and another in columns, used to study the correlation between the two variables. It is a useful way to represent the total counts of observations that fall into each combination of the levels of categorical variables.
 
-We will work with the comics data set.This is a collection of characteristics on all of the superheroes created by Marvel and DC comics in the last 80 years.
+We will work with the comics data set. This is a collection of characteristics on all of the superheroes created by Marvel and DC comics in the last 80 years.
 
 # Loading the Required Libraries
 
