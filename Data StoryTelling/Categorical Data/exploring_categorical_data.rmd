@@ -178,14 +178,33 @@ Among characters with "Neutral" alignment, males are the most common.
 ## Counts versus proportions
 Sometimes counts of cases can be useful but often it is the proportions that are more interesting.
 
-Proportions can ve presented with:
+Proportions can be presented with:
 
-1. Contingency tables by adding a condition. The ondition can be 1 or 2, 1 represnting rows and 2 represetning columns.   
-2. A conditional bar chart plotted by asigning position of the geom bar to fill.
+1. Contingency tables by using the prop.table() function as follows:
 
+    + Joint proportions: prop.table(contingency_table)
+    
+    + Conditional Proportions. The condition can be 1 or 2, 1 represnting rows and 2 represetning columns.i.e prop.table(contingency_table, 2)  which is Conditional on columns
+    
+2. A bar chart: by asigning position of the geom bar to fill.
 
+### Contingency table and proportions
 
+#### Joint contingency table proportions
 
+```{r}
+prop.table(contab) # Joint proportions
+```
+
+#### Interpreting the joint proportions above
+
+The largest category is males who are bad.
+
+**Problem**
+What if we want to know which  gender has the best or worst charaters. Based on the previous contigency table of counts it is evident that males are more than females so this joint proportions table will not give us the correct answer. 
+
+**What is the solution now?**
+The solution is to introduce a condition column wise i.e on the gender.
 
 
 
