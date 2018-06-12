@@ -307,7 +307,6 @@ ggplot(comics, aes(x = gender, fill = align)) +
 In general, there is an association between gender and alignment.
 
 There are more male characters than female characters in this dataset.
-press 4
 
 Among characters with "Neutral" alignment, males are the most common.
 

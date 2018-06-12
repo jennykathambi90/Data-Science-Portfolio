@@ -44,11 +44,9 @@ We will follow the following steps:
 9. Make a conclusion.
 
 
-<<<<<<< HEAD
+
 # Conclusion
-=======
-Conclusion
->>>>>>> d23ae8746485a0b19082accd858e4aba05c3d591
+
 It is difficult to interpret pie charts therefore let us always stick to bar charts.
 
 Categorical data sets are best presented with conditional proportions. There are two ways of doing this:
