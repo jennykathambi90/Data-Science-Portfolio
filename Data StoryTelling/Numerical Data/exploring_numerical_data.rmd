@@ -51,3 +51,13 @@ Classical estimation techniques have the characteristic of taking all of the dat
 classical tests **depend on underlying assumptions** (e.g., normality), and hence the validity of the test conclusions becomes dependent on the validity of the underlying assumptions. Worse yet, the exact underlying assumptions may be unknown to the analyst, or if known, untested. | Many EDA techniques make **little or no assumptions--they present and show the data--all of the data--as is, with fewer encumbering assumptions**
 
 In this post, we'll work with the cars dataset, which records characteristics on all of the new models of cars for sale in the US in a certain year. We will investigate the distribution of mileage across a categorial variable, but before we get there, let us familiarize ourselves with the cars dataset.
+
+# Loading the Required Libraries
+
+
+Let us load the required libraries
+
+```{r}
+library(ggplot2)
+library(dplyr)
+```
