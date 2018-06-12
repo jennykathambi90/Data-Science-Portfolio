@@ -261,3 +261,38 @@ ggplot(comics, aes(x = gender,fill = align)) +
 
 From the above stacked bar chart we can see that the female gender has more good characters than bad characters while the male gender has more bad characters than good charactes.
 
+## Distribution of one variable
+
+
+### Marginal barchart
+
+
+Marginal because it tabulates the count of alignments across all the variables.
+
+If we are interested in the distribution of alignment of all superheroes, it makes sense to construct a barchart for just that single variable.
+
+we can improve the interpretability of the plot, though, by implementing some sensible ordering. Superheroes that are "Neutral" show an alignment between "Good" and "Bad", so it makes sense to put that bar in the middle.Marginal barchart
+
+#### Change the order of the levels in align
+
+
+```{r}
+# Change the order of the levels in align
+comics$align <- factor(comics$align, 
+                      levels = c("Bad", "Neutral", "Good"))
+
+```
+
+#### Create a marginal barchart of align
+
+```{r}
+# Create plot of align
+ggplot(comics, aes(x = align)) + 
+  geom_bar()
+```
+
+#### Interpreting the marginal barchat of align
+
+The bad characters are the majority.
+
+
