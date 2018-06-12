@@ -296,3 +296,28 @@ ggplot(comics, aes(x = align)) +
 The bad characters are the majority.
 
 
+### Conditional barchart--Facetting
+
+
+Now, if we want to break down the distribution of alignment based on gender, we're looking for conditional distributions.
+
+we could make these by creating multiple filtered datasets (one for each gender) or by faceting the plot of alignment based on gender.
+
+We will work with facetting.
+
+```{r}
+# Plot of alignment broken down (facetted) by gender
+ggplot(comics, aes(x = align)) + 
+  geom_bar() +
+  facet_wrap(~ gender)
+```
+
+
+#### Interpreting the conditional barchat of align facetted by align
+
+
+For the the female gender the good characters are more than the bad characters.
+
+For the male gender the bad characters are more than the good characters.
+
+
