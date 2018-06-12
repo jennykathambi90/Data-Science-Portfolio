@@ -104,6 +104,12 @@ ggplot(cars, aes(x = city_mpg)) +
   facet_wrap(~ suv)
 ```
 
+### Interpreting the facetted histogram
+
+1. The non SUVs are more than the SUVs.
+2. The non SUVs make higher mileage than the SUVs.
+3. The non SUVs have more variablity than the SUVs.
+4. It gives us a warning that there are 14 missing values which have been omitted by the plot.
 
 
 
