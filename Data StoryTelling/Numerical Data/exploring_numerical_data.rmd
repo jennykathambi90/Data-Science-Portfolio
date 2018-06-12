@@ -58,6 +58,47 @@ In this post, we'll work with the cars dataset, which records characteristics on
 Let us load the required libraries
 
 ```{r}
+library(data.table)
 library(ggplot2)
 library(dplyr)
 ```
+
+
+# Loading the cars data
+
+
+We will use fread() of the data.table package 
+
+```{r}
+cars<-fread("data/cars.csv")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
