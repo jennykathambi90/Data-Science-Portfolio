@@ -86,6 +86,67 @@ glimpse(cars)
 
 The cars data set has a mixture of data types including, chr, logical, dbl, and int.
 
+## Faceted histogram
+
+We are going to investigate the distribution of mileage i.e *city_mpg* across a categorial variable, _suv_
+
+Mileage i.e *city_mpg* is a numerical variable and since numerical variables are continous we will investigate its distribution using a histogram.
+
+We will plot a histogram of *city_mpg* facetted by logical variable _suv_ that indicates whether the car is an SUV or not. 
+
+Categorical variables e.g logical variables, gender e.t.c are used to facet plots i.e we can facet a plot by any categorical variable using facet_wrap().
+
+
+```{r}
+# Create faceted histogram
+ggplot(cars, aes(x = city_mpg)) +
+  geom_histogram() +
+  facet_wrap(~ suv)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
