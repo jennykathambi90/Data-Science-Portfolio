@@ -90,7 +90,7 @@ levels(comics$align)
 levels(comics$gender)
 ```
 
-## The alignment gender contingency table
+## The alignment gender **contingency table**
 As said earlier a contingency table is a useful way to represent the total counts of observations that fall into each combination of the levels of categorical variables.
 
 We will show the cotingency table of comics alignment versus gender. Save it as contab.
@@ -148,6 +148,24 @@ contab
 
 The _**"reformed criminals level"**_ has been dropped.
 
+## Side-by-side bar charts
+
+While a contingency table represents the counts numerically, it's often more useful to represent them graphically.
+
+Here we'll construct two side-by-side barcharts of the comics data. This shows that there can often be two or more options for presenting the same data. Passing the argument position = "dodge" to geom_bar() says that we want a side-by-side (i.e. not stacked) barchart.
+
+```{r}
+# Load ggplot2. Already loaded
+
+# Create side-by-side barchart of gender by alignment
+ggplot(comics, aes(x = align, fill = gender)) + 
+  geom_bar(position = "dodge")
+
+# Create side-by-side barchart of alignment by gender
+ggplot(comics, aes(x = gender, fill = align)) + 
+  geom_bar(position="dodge") +
+  theme(axis.text.x = element_text(angle = 90))# Rotate the x axis text to 90 degrees for readability
+```
 
 
 
