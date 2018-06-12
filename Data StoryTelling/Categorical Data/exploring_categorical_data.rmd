@@ -207,5 +207,14 @@ What if we want to know which  gender has the best or worst charaters. Based on 
 The solution is to introduce a condition column wise i.e on the gender.
 
 
+#### Conditional contingency table proportions
+
+```{r}
+prop.table(contab, 2)#Conditional on columns i.e gender
+```
+
+#### Interpreting the coditional proportions above
+
+From the conditional table above we can see that the female gender has more good characters than bad characters while the male gender has more bad characters than good charactes.
 
 
