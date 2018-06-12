@@ -337,4 +337,10 @@ ggplot(comics, aes(x =1, fill= align)) +
   coord_polar("y", start=0)
 ```
 
+# Conclusion
 It is difficult to interpret pie charts therefore let us always stick to bar charts.
+
+Categorical data sets are best presented with conditional proportions. There are two ways of doing this:
+
+1. stacked bar charts alongside the fill aesthetic. These show conditional proportions. 
+2. Conditional contingency tables. These too show conditional proportions.
