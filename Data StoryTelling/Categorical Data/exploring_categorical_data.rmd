@@ -321,3 +321,20 @@ For the the female gender the good characters are more than the bad characters.
 For the male gender the bad characters are more than the good characters.
 
 
+### Pie charts
+A pie chart (or a circle chart) is a circular statistical graphic which is divided into slices to illustrate numerical proportion. 
+
+In a pie chart, the arc length of each slice (and consequently its central angle and area), is proportional to the quantity it represents.
+
+The piechart is a very common way to represent the distribution of a single categorical variable, but they can be more difficult to interpret than barcharts.
+
+#### Marginal Pie charts
+
+```{r}
+# Create a piechart of align
+ggplot(comics, aes(x =1, fill= align)) + 
+  geom_bar()+ 
+  coord_polar("y", start=0)
+```
+
+It is difficult to interpret pie charts therefore let us always stick to bar charts.
