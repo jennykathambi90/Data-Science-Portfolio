@@ -6,14 +6,17 @@ output:
   html_document:
     keep_md: yes
     theme: united
+    number_sections: true
     toc: yes
-    toc_depth: 4
+    toc_depth: 5
     toc_float:
       collapsed: yes
       smooth_scroll: yes
 ---
 
 # Introduction. Data Analysis Overview.
+
+
 Data analysis is a process of inspecting, cleansing, transforming, and modeling data with the goal of discovering useful information, informing conclusions, and supporting decision-making. 
 
 Three popular data analysis approaches are:
@@ -53,6 +56,7 @@ We will work with the comics data set.This is a collection of characteristics on
 
 # Loading the Required Libraries
 
+
 Let us load the required libraries
 
 ```{r}
@@ -61,6 +65,7 @@ library(dplyr)
 ```
 
 # Loading the comics data
+
 
 We will use read.csv() of the utils package i.e base r package.
 
@@ -71,11 +76,13 @@ comics<-read.csv("data/comics.csv")
 
 # EDA of the Comics dataset
 
+
 ## Initial exploration of the comics data set
 
+
 ```{r}
-# Print the first rows of the data
-comics
+# Print the first 6 rows of the data
+head(comics)
 
 #view the variable names of comics
 names(comics)
@@ -90,7 +97,12 @@ levels(comics$align)
 levels(comics$gender)
 ```
 
-## The alignment gender **contingency table**
+## Distribution of two variables
+
+
+### The alignment versus gender **contingency table**
+
+
 As said earlier a contingency table is a useful way to represent the total counts of observations that fall into each combination of the levels of categorical variables.
 
 We will show the cotingency table of comics alignment versus gender. Save it as contab.
@@ -103,7 +115,8 @@ contab<-table(comics$align,comics$gender)
 contab
 ```
 
-## Dropping levels
+### Dropping levels
+
 
 The contingency table revealed that there are some levels that have very low counts. To simplify the analysis, it often helps to drop such levels.
 
@@ -111,7 +124,8 @@ In R, this requires two steps:
   
   1. first filtering out any rows with the levels that have very low counts, then 2. removing these levels from the factor variable with droplevels(). This is because the droplevels() function would keep levels that have just 1 or 2 counts; it only drops levels that don't exist in a dataset.
 
-### Explore the levels to find out which ones have the lowest entries.
+#### Explore the levels to find out which ones have the lowest entries.
+
 
 Let us print contab to find out which level of align has the fewest total entries.
 ```{r}
@@ -121,7 +135,9 @@ contab
 
 From the above coningency level it is the _**"reformed criminals level"**_ which has the fewest total entries.
 
-### Dropping the levels that have the lowest entries.
+#### Drop the levels that have the lowest entries.
+
+
 Use filter() to filter out all rows of comics with that level, then drop the unused level with droplevels(). Save the simplifed dataset over the old one as comics.
 
 ```{r}
@@ -148,7 +164,7 @@ contab
 
 The _**"reformed criminals level"**_ has been dropped.
 
-## Side-by-side bar charts
+### Side-by-side bar charts
 
 While a contingency table represents the counts numerically, it's often more useful to represent them graphically.
 
@@ -167,7 +183,9 @@ ggplot(comics, aes(x = gender, fill = align)) +
   theme(axis.text.x = element_text(angle = 90))# Rotate the x axis text to 90 degrees for readability
 ```
 
-### Bar chart interpretation
+#### Bar chart interpretation
+
+
 In general, there is an association between gender and alignment.
 
 There are more male characters than female characters in this dataset.
@@ -175,7 +193,9 @@ press 4
 
 Among characters with "Neutral" alignment, males are the most common.
 
-## Counts versus proportions
+### Counts versus proportions
+
+
 Sometimes counts of cases can be useful but often it is the proportions that are more interesting.
 
 Proportions can be presented with:
@@ -186,17 +206,20 @@ Proportions can be presented with:
     
     + Conditional Proportions. The condition can be 1 or 2, 1 represnting rows and 2 represetning columns.i.e prop.table(contingency_table, 2)  which is Conditional on columns
     
-2. A bar chart: by asigning position of the geom bar to fill.
+2. A stacked bar chart: by asigning position of the geom bar to fill.
 
-### Contingency table and proportions
+#### Contingency table and proportions
 
-#### Joint contingency table proportions
+
+##### Joint contingency table proportions
+
 
 ```{r}
 prop.table(contab) # Joint proportions
 ```
 
-#### Interpreting the joint proportions above
+##### Interpreting the joint proportions above
+
 
 The largest category is males who are bad.
 
@@ -207,14 +230,34 @@ What if we want to know which  gender has the best or worst charaters. Based on 
 The solution is to introduce a condition column wise i.e on the gender.
 
 
-#### Conditional contingency table proportions
+##### Conditional contingency table proportions
+
 
 ```{r}
 prop.table(contab, 2)#Conditional on columns i.e gender
 ```
 
-#### Interpreting the coditional proportions above
+##### Interpreting the conditional proportions above
+
 
 From the conditional table above we can see that the female gender has more good characters than bad characters while the male gender has more bad characters than good charactes.
 
+#### Stacked Bar charts and proportions
+
+
+Stacked bar charts are the ones that show proportions.
+
+Lets represent the above conditional contingency table, that is conditional on the gender, as a sctacked bar chart.
+
+```{r}
+# Plot proportion of align, conditional on gender
+ggplot(comics, aes(x = gender,fill = align)) + 
+  geom_bar(position = "fill") +
+  ylab("proportion")
+```
+
+##### Interpreting the conditional proportions above
+
+
+From the above stacked bar chart we can see that the female gender has more good characters than bad characters while the male gender has more bad characters than good charactes.
 
