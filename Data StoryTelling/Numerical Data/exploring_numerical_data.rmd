@@ -1,0 +1,53 @@
+---
+title: "Exploratory Data Analysis: Numerical Data"
+author: "Jane Kathambi"
+date: "8 June 2018"
+output: 
+  html_document:
+    keep_md: yes
+    theme: united
+    number_sections: true
+    toc: yes
+    toc_depth: 5
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+
+# Introduction. Data Analysis Overview.
+
+
+Data analysis is a process of inspecting, cleansing, transforming, and modeling data with the goal of discovering useful information, informing conclusions, and supporting decision-making. 
+
+Three popular data analysis approaches are:
+
+1. Classical
+2. Exploratory (EDA)
+3. Bayesian
+
+These three approaches are similar in that they all start with a general science/engineering problem and all yield science/engineering conclusions. The difference is the sequence and focus of the intermediate steps as shown below:
+
+* For **classical analysis**, the sequence is:
+
+    + Problem => Data => Model => Analysis => Conclusions
+
+* For **EDA**, the sequence is:
+
+    + Problem => Data => Analysis => Model => Conclusions
+
+* For **Bayesian**, the sequence is:
+
+    + Problem => Data => Model => Prior Distribution => Analysis => Conclusions
+
+Thus for classical analysis, the data collection is followed by the imposition of a model (normality, linearity, etc.) and the analysis, estimation, and testing that follows are focused on the parameters of that model. For EDA, the data collection is not followed by a model imposition; rather it is followed immediately by analysis with a goal of inferring what model would be appropriate. 
+
+Classical Analysis                   | Eda
+------------------------------------ | -----------------------------------------
+**Imposes models** (both deterministic and probabilistic) on the data. Deterministic models include, for example, regression models and analysis of variance (ANOVA) models. The most common probabilistic model assumes that the errors about the deterministic model are normally distributed--this assumption affects the validity of the ANOVA F tests. | **Does not impose** deterministic or probabilistic models on the data. On the contrary, the EDA approach allows the data to suggest admissible models that best fit the data.
+The *focus is on the model*--estimating parameters of the model and generating predicted values from the model. |  The *focus is on the data*--its structure, outliers, and models suggested by the data.
+Classical **techniques** are generally **quantitative** in nature. They include ANOVA, t tests, chi-squared tests, and F tests. | EDA **techniques** are generally **graphical**. They include scatter plots, character plots, box plots, histograms, bihistograms, probability plots, residual plots, and mean plots.
+Classical techniques serve as the **probabilistic foundation** of science and engineering; the most important characteristic of classical techniques is that they are **rigorous, formal, and "objective"**. | EDA techniques **do not share in that rigor or formality**. EDA techniques make up for that lack of rigor by being **very suggestive, indicative, and insightful about what the appropriate model should be**. EDA techniques are **subjective** and **depend on interpretation which may differ from analyst to analyst**, although experienced analysts commonly arrive at identical conclusions.
+Classical estimation techniques have the characteristic of taking all of the data and mapping the data into a few numbers ("estimates"). This is both a virtue and a vice. The virtue is that these few numbers focus on important characteristics (location, variation, etc.) of the population. The vice is that concentrating on these few characteristics can **filter out other characteristics (skewness, tail length, autocorrelation, etc.) of the same population. In this sense there is a loss of information due to this "filtering" process**. | The EDA approach, on the other hand, often makes use of (and shows) all of the available data. In this sense there is **no corresponding loss of information**.
+classical tests **depend on underlying assumptions** (e.g., normality), and hence the validity of the test conclusions becomes dependent on the validity of the underlying assumptions. Worse yet, the exact underlying assumptions may be unknown to the analyst, or if known, untested. | Many EDA techniques make **little or no assumptions--they present and show the data--all of the data--as is, with fewer encumbering assumptions**
+
+In this post, we'll work with the cars dataset, which records characteristics on all of the new models of cars for sale in the US in a certain year. We will investigate the distribution of mileage across a categorial variable, but before we get there, let us familiarize ourselves with the cars dataset.
