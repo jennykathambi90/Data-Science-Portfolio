@@ -74,7 +74,17 @@ cars<-fread("data/cars.csv")
 ```
 
 
+# EDA of the cars dataset
 
+## Initial exploration of the cars data set
+
+```{r}
+# View the size of the data and the variable types
+glimpse(cars)
+
+```
+
+The cars data set has a mixture of data types including, chr, logical, dbl, and int.
 
 
 
