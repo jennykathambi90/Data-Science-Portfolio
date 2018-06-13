@@ -195,7 +195,7 @@ ggplot(common_cyl, aes(x = city_mpg, fill = as.factor(ncyl))) +
 
 We will now look at the distribution of a single varaible.
 
-##Marginal and conditional histograms
+## Marginal and conditional histograms
 
 We are going to work with a new variable: horsepwr. The goal is to get a sense of the marginal distribution of this variable and then compare it to the distribution of horsepower conditional on the price of the car being less than $25,000.
 
@@ -234,12 +234,43 @@ cars%>%
 1. The highest horsepower car in the less expensive range has just under 250 horsepower.
 2. Cars in the less expensive range and have around 150 horsepower are the most common.
 
+### Binwidths
 
+It's a good idea to see how things change when you alter the binwidth  of histograms. 
 
+The binwidth determines how smooth your distribution will appear: the smaller the binwidth, the more jagged your distribution becomes.
 
+It's good practice to consider several binwidths in order to **detect different types of structure in your data**.
 
+Let us create the following three plots, adding a title to each to indicate the binwidth used:
 
+1. A histogram of horsepower (i.e. horsepwr) with a binwidth of 3.
+2. A second histogram of horsepower with a binwidth of 30.
+3. A third histogram of horsepower with a binwidth of 60.
 
+```{r}
+# Create hist of horsepwr with binwidth of 3
+cars %>%
+  ggplot(aes(horsepwr)) +
+  geom_histogram(binwidth = 3) +
+  ggtitle("Plot A: A histogram of horsepwr with binwidth of 3")
+
+# Create hist of horsepwr with binwidth of 30
+cars %>%
+  ggplot(aes(horsepwr)) +
+  geom_histogram(binwidth = 30) +
+  ggtitle("Plot B: A histogram of horsepwr with binwidth of 30")
+
+# Create hist of horsepwr with binwidth of 60
+cars %>%
+  ggplot(aes(horsepwr)) +
+  geom_histogram(binwidth = 60) +
+  ggtitle("Plot C: A histogram of horsepwr with binwidth of 60")
+```
+
+#### Binwidths Interpretation
+
+1. Plot A is the only histogram that shows the count for cars with exactly 200 and 300 horsepower i.e Plot A is the only histogram that shows the count for cars with exactly 200 and 300 horsepower.
 
 
 
