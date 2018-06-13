@@ -160,11 +160,17 @@ ggplot(common_cyl, aes(x = as.factor(ncyl), y = city_mpg)) +
 
 **Interpreting the box plot:**
 
-1. City miles per decrease with increase in number of cylinders.
+1. City miles decrease with increase in number of cylinders.
 2. There are outliers as shown by the black dots.
 3. The miles of the cars that have 6 cylnders do not vary much. However, the miles of the cars with 8 cylinders vary more and those with 4 cylinders vary most.
 4. The longer upper whisker of the first box plot, shows that majority of cars with 4 cylinders have their mpg varying a lot, however the shorter whiskers of cars with 6 and 8 cylinders tells us that their mpg does not vary much and it tends to center around the average.
-5. Skew of the data, Skew refers to the asymmetry of your data: If you look at cars with 6 cylinders, the box and whiskers are pretty even on either side of the median. However, the distribution of cars with 4 cylinders is skewed towards the lower end since majority of these cars are concentrated on the upper end. This means that majority of cars with 4 cylinders have relatively high mileage.
+5. Skew of the data, Skew refers to the asymmetry of your data: 
+
+    + If you look at cars with 6 cylinders, the box and whiskers are pretty even on either side of the median. 
+    
+    + However, the distribution of cars with 4 cylinders is skewed towards the lower end since majority of these cars are concentrated on the upper end. This means that majority of cars with 4 cylinders have relatively high mileage.
+    
+    + Similarly, the distribution of cars with 8 cylinders is heavily skewed towards the lower end since majority of these cars are concentrated on the upper end. This means that majority of cars with 8 cylinders have a mileage of around 17.
 
 NB: Skewness is only considered in the case of continous variables not categorical variables. NB. city_mpg is continous.
 
@@ -218,7 +224,7 @@ cars%>%
 
 ### Conditional Histograms
 
-We will now create a second histogram of the distribution of horsepower, but only for those cars that have an msrp less than $25,000. We will keep the limits of the x-axis so that they're similar to that of the first plot, and add a descriptive title.
+We will now create a second histogram of the distribution of horsepower, but only for those cars that have an msrp(manufacturer's suggested retail price) less than $25,000. We will keep the limits of the x-axis so that they're similar to that of the first plot, and add a descriptive title.
 
 ```{r}
 cars%>%
@@ -271,6 +277,66 @@ cars %>%
 #### Binwidths Interpretation
 
 1. Plot A is the only histogram that shows the count for cars with exactly 200 and 300 horsepower i.e Plot A is the only histogram that shows the count for cars with exactly 200 and 300 horsepower.
+
+## Boxplots
+
+### Box plots for outliers
+
+In addition to indicating the center and spread of a distribution, a box plot provides a graphical means to detect outliers. 
+
+We will apply this method to the msrp column (manufacturer's suggested retail price) to detect if there are unusually expensive or cheap cars:
+
+1. Construct a box plot of msrp. Check out for the point(msrp) where the outliers beging uccuring.
+
+2. Exclude the largest 3-5 outliers by filtering the rows to retain cars less than $100,000. Save this reduced dataset as cars_no_out.
+
+3. Construct a similar box plot of msrp using this reduced dataset. Compare the two plots.
+
+```{r}
+# Construct box plot of msrp
+cars %>%
+  ggplot(aes(x = 1, y = msrp)) +
+  geom_boxplot()
+
+# Exclude outliers from data
+cars_no_out <- cars %>%
+  filter(msrp<100000)
+
+# Construct box plot of msrp using the reduced dataset
+cars_no_out %>%
+  ggplot(aes(x = 1, y = msrp)) +
+  geom_boxplot()
+```
+
+
+**Comparing the two plots**
+
+The precision of the second plot has increased since some of the outliers have been removed.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
