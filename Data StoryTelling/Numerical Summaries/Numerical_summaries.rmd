@@ -15,3 +15,41 @@ output:
 ---
 
 # Introduction
+We are going to look at numerical summaries.
+We will explore the four characteristics of distribution which are:
+
+1. Measures of center, 
+2. Measures of variability(spread),
+3. The shape of the distribution,
+4. 
+
+## Measure of center
+
+Below are measures of tendancy and an explanation of which  work well with what data. 
+**Mean**-> Balance point of the data. Very sensitive to extreme values i.e affected by skewed data so not a good choice.
+
+**Median**-> Divides the data into a lower half and a upper half. Better than mean when working with skewed data.
+
+**Mode**-> Most common entries.
+
+So which one to use?
+
+1. For highly skewed data median is the best, but mean for lowly skewed data.
+2. For non skewed data all of them.
+
+## Measure of Variability
+
+**sd**-> Most commonly used. But does not work well with highly skewed data i.e extreme values
+
+**Variance**-> shows how much the data varies from the measure of center. Not widely used because it is not in the same units with the original data so sd is better.
+
+**IQR**-> best used with skewed data as it does not change
+
+**Range**->Not often used because it does not work well with skewed data i.e extreme values.
+
+So which one to use?
+
+1. For highly skewed data IQR is the best, but sd for lowly skewed data.
+2. For non skewed data all of them.
+
+so median and IQR measure the central tendency and spread, respectively, but are robust to outliers and non-normal data.
