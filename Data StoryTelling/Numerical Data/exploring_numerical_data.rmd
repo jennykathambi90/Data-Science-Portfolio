@@ -85,8 +85,9 @@ glimpse(cars)
 ```
 
 The cars data set has a mixture of data types including, chr, logical, dbl, and int.
+## Distribution of two variables
 
-## Faceted histogram
+### Faceted histogram
 
 We are going to investigate the distribution of mileage i.e *city_mpg* across a categorial variable, _suv_
 
@@ -104,14 +105,14 @@ ggplot(cars, aes(x = city_mpg)) +
   facet_wrap(~ suv)
 ```
 
-### Interpreting the facetted histogram
+#### Interpreting the facetted histogram
 
 1. The non SUVs are more than the SUVs.
 2. The non SUVs make higher mileage than the SUVs.
 3. The non SUVs have more variablity than the SUVs.
 4. It gives us a warning that there are 14 missing values which have been omitted by the plot.
 
-## Boxplots 
+### Boxplots 
 
 The mileage of a car tends to be associated with the size of its engine (as measured by the number of cylinders). To explore the relationship between these two variables, we could stick to using histograms, but in section we'll try  the box plot and in the next section the density plot.
 
@@ -167,7 +168,7 @@ ggplot(common_cyl, aes(x = as.factor(ncyl), y = city_mpg)) +
 
 NB: Skewness is only considered in the case of continous variables not categorical variables. NB. city_mpg is continous.
 
-## Density Plot
+### Density Plot
 A Density Plot visualises the distribution of data over a continuous interval or time period. This chart is a variation of a Histogram that uses kernel smoothing to plot values, allowing for smoother distributions by smoothing out the noise. The peaks of a Density Plot help display where values are concentrated over the interval.
 
 An advantage Density Plots have over Histograms is that they're better at determining the distribution shape because they're not affected by the number of bins used (each bar used in a typical histogram). A Histogram comprising of only 4 bins wouldn't produce a distinguishable enough shape of distribution as a 20-bin Histogram would. However, with Density Plots, this isn't an issue.
@@ -182,7 +183,7 @@ ggplot(common_cyl, aes(x = city_mpg, fill = as.factor(ncyl))) +
   geom_density(alpha = .3)
 ```
 
-### Interpreting the density plot
+#### Interpreting the density plot
 
 1. The highest mileage cars have 4 cylinders.
 2. The typical 4 cylinder car gets better mileage than the typical 6 cylinder car, which gets better mileage than the typical 8 cylinder car.
@@ -190,15 +191,48 @@ ggplot(common_cyl, aes(x = city_mpg, fill = as.factor(ncyl))) +
 4. The variability in mileage of 8 cylinder cars seem much smaller than that of 4 cylinder cars.
 5. Similarly, the variability in mileage of 6 cylinder cars seem much smaller than that of 4 cylinder cars.
 
+## Distribution of one varriable
 
+We will now look at the distribution of a single varaible.
 
+##Marginal and conditional histograms
 
+We are going to work with a new variable: horsepwr. The goal is to get a sense of the marginal distribution of this variable and then compare it to the distribution of horsepower conditional on the price of the car being less than $25,000.
 
+We'll be making two plots using the "data pipeline" paradigm of dplyr, where you start with the raw data and end with the plot.
 
+### Marginal Histogram
 
+Let us now create a histogram of the distribution of horsepwr across all cars (across all cars explains the marginal name) and add an appropriate title.
 
+```{r}
+cars%>%
+  ggplot(aes(x=horsepwr))+
+  geom_histogram()+
+  ggtitle("A histogram of the distribution of horsepwr")
+```
+#### Interpreting the marginal histogram
 
+1. Cars with around 275 horsepower are more common than cars with around 300 horsepower.
+2. Generally the distribution on horse power varies a lot.
 
+### Conditional Histograms
+
+We will now create a second histogram of the distribution of horsepower, but only for those cars that have an msrp less than $25,000. We will keep the limits of the x-axis so that they're similar to that of the first plot, and add a descriptive title.
+
+```{r}
+cars%>%
+  filter(msrp<25000)%>%
+  ggplot(aes(x=horsepwr))+
+  geom_histogram()+
+  xlim(c(90, 550)) +
+  ggtitle("The distribution of horsepwr for cars with an msrp less than $25,000")
+```
+
+#### Interpreting the conditional histogram
+
+1. The highest horsepower car in the less expensive range has just under 250 horsepower.
+2. Cars in the less expensive range and have around 150 horsepower are the most common.
 
 
 
