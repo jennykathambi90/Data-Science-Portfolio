@@ -358,12 +358,27 @@ cars %>%
 The boxplot doesnt show much about width apart from telling us that it is evenly distributed and has two outliers. However the density plot shows how the distribution is a multimodal one with three modes. This tells us that majority of the observations/cars have widths which fall within the three common widths approximately 68, 72 and 78.
 So for width we chose the density plot since it tells us more about the distribution.
 
+## Visualization in higher dimensions
+
+### 3 variable plot
+Faceting is a valuable technique for looking at several conditional distributions at the same time. If the faceted distributions are laid out in a grid, you can consider the association between a variable and two others, one on the rows of the grid and the other on the columns.
+
+We will use the common_cyl, which we created to contain only cars with 4, 6, or 8 cylinder, to create a histogram of _**hwy_mpg**_ faceted on both _**ncyl**_ and _**suv**_.
+We will also add a title to this plot to indicate what variables are being faceted on.
+
+```{r}
+# Facet hists using hwy mileage and ncyl
+common_cyl %>%
+  ggplot(aes(x =hwy_mpg)) +
+  geom_histogram() +
+  facet_grid(ncyl ~ suv, labeller = label_both)
+```
 
 
+#### Interpreting the 3 var plot
 
-
-
-
+1. Across both SUVs and non-SUVs, mileage tends to decrease as the number of cylinders increases.
+2.There are more non-suv cars than suv cars across all cylinder types.
 
 
 
