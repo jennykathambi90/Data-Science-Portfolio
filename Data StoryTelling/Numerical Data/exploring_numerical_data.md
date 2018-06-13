@@ -57,10 +57,34 @@ In this post, we'll work with the cars dataset, which records characteristics on
 
 Let us load the required libraries
 
-```{r}
+
+```r
 library(data.table)
 library(ggplot2)
 library(dplyr)
+```
+
+```
+## 
+## Attaching package: 'dplyr'
+```
+
+```
+## The following objects are masked from 'package:data.table':
+## 
+##     between, first, last
+```
+
+```
+## The following objects are masked from 'package:stats':
+## 
+##     filter, lag
+```
+
+```
+## The following objects are masked from 'package:base':
+## 
+##     intersect, setdiff, setequal, union
 ```
 
 
@@ -69,7 +93,8 @@ library(dplyr)
 
 We will use fread() of the data.table package 
 
-```{r}
+
+```r
 cars<-fread("data/cars.csv")
 ```
 
@@ -78,10 +103,34 @@ cars<-fread("data/cars.csv")
 
 ## Initial exploration of the cars data set
 
-```{r}
+
+```r
 # View the size of the data and the variable types
 glimpse(cars)
+```
 
+```
+## Observations: 428
+## Variables: 19
+## $ name        <chr> "Chevrolet Aveo 4dr", "Chevrolet Aveo LS 4dr hatch...
+## $ sports_car  <lgl> FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, F...
+## $ suv         <lgl> FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, F...
+## $ wagon       <lgl> FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, F...
+## $ minivan     <lgl> FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, F...
+## $ pickup      <lgl> FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, F...
+## $ all_wheel   <lgl> FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, F...
+## $ rear_wheel  <lgl> FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, F...
+## $ msrp        <int> 11690, 12585, 14610, 14810, 16385, 13670, 15040, 1...
+## $ dealer_cost <int> 10965, 11802, 13697, 13884, 15357, 12849, 14086, 1...
+## $ eng_size    <dbl> 1.6, 1.6, 2.2, 2.2, 2.2, 2.0, 2.0, 2.0, 2.0, 2.0, ...
+## $ ncyl        <int> 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,...
+## $ horsepwr    <int> 103, 103, 140, 140, 140, 132, 132, 130, 110, 130, ...
+## $ city_mpg    <int> 28, 28, 26, 26, 26, 29, 29, 26, 27, 26, 26, 32, 36...
+## $ hwy_mpg     <int> 34, 34, 37, 37, 37, 36, 36, 33, 36, 33, 33, 38, 44...
+## $ weight      <int> 2370, 2348, 2617, 2676, 2617, 2581, 2626, 2612, 26...
+## $ wheel_base  <int> 98, 98, 104, 104, 104, 105, 105, 103, 103, 103, 10...
+## $ length      <int> 167, 153, 183, 183, 183, 174, 174, 168, 168, 168, ...
+## $ width       <int> 66, 66, 69, 68, 69, 67, 67, 67, 67, 67, 67, 67, 67...
 ```
 
 The cars data set has a mixture of data types including, chr, logical, dbl, and int.
@@ -98,12 +147,23 @@ We will plot a histogram of *city_mpg* facetted by logical variable _suv_ that i
 Categorical variables e.g logical variables, gender e.t.c are used to facet plots i.e we can facet a plot by any categorical variable using facet_wrap().
 
 
-```{r}
+
+```r
 # Create faceted histogram
 ggplot(cars, aes(x = city_mpg)) +
   geom_histogram() +
   facet_wrap(~ suv)
 ```
+
+```
+## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+```
+
+```
+## Warning: Removed 14 rows containing non-finite values (stat_bin).
+```
+
+![](exploring_numerical_data_files/figure-html/unnamed-chunk-4-1.png)<!-- -->
 
 #### Interpreting the facetted histogram
 
@@ -120,13 +180,25 @@ A quick look at unique(cars$ncyl) i.e number of cylinders shows that there are m
 
 Which are the most common levels?  We will use the table function to calculate this.
 
-```{r}
+
+```r
 # Let us look at the unique levels of the variable ncyl. There are 8 unique levels.
 unique(cars$ncyl)
+```
 
+```
+## [1]  4  6  3  8  5 12 10 -1
+```
+
+```r
 #To show the most common levels? It is levels 4,6 and 8.
 table(cars$ncyl)
+```
 
+```
+## 
+##  -1   3   4   5   6   8  10  12 
+##   2   1 136   7 190  87   2   3
 ```
 
 **Interpreting the results:**
@@ -138,7 +210,8 @@ table(cars$ncyl)
 Let us now **filter cars to include only cars with 4, 6, or 8 cylinders** and save the result as common_cyl. We will use the %in% operator.
 
 
-```{r}
+
+```r
 # Filter cars with 4, 6, 8 cylinders
 common_cyl= cars %>%
             filter(ncyl %in% c(4,6,8) )
@@ -147,15 +220,25 @@ common_cyl= cars %>%
 unique(common_cyl$ncyl)
 ```
 
+```
+## [1] 4 6 8
+```
+
 
 Let us now create side-by-side box plots of city_mpg separated out by ncyl
 
-```{r}
+
+```r
 # Create box plots of city mpg by ncyl
 ggplot(common_cyl, aes(x = as.factor(ncyl), y = city_mpg)) +
   geom_boxplot()
+```
 
 ```
+## Warning: Removed 11 rows containing non-finite values (stat_boxplot).
+```
+
+![](exploring_numerical_data_files/figure-html/unnamed-chunk-7-1.png)<!-- -->
 
 
 **Interpreting the box plot:**
@@ -183,11 +266,18 @@ Therefore, Kernal density plots are usually a much more effective way to view th
 
 Let us now create overlaid density plots of city_mpg colored by ncyl
 
-```{r}
+
+```r
 # Create overlaid density plots for same data
 ggplot(common_cyl, aes(x = city_mpg, fill = as.factor(ncyl))) +
   geom_density(alpha = .3)
 ```
+
+```
+## Warning: Removed 11 rows containing non-finite values (stat_density).
+```
+
+![](exploring_numerical_data_files/figure-html/unnamed-chunk-8-1.png)<!-- -->
 
 #### Interpreting the density plot
 
@@ -211,12 +301,19 @@ We'll be making two plots using the "data pipeline" paradigm of dplyr, where you
 
 Let us now create a histogram of the distribution of horsepwr across all cars (across all cars explains the marginal name) and add an appropriate title.
 
-```{r}
+
+```r
 cars%>%
   ggplot(aes(x=horsepwr))+
   geom_histogram()+
   ggtitle("A histogram of the distribution of horsepwr")
 ```
+
+```
+## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+```
+
+![](exploring_numerical_data_files/figure-html/unnamed-chunk-9-1.png)<!-- -->
 #### Interpreting the marginal histogram
 
 1. Cars with around 275 horsepower are more common than cars with around 300 horsepower.
@@ -226,7 +323,8 @@ cars%>%
 
 We will now create a second histogram of the distribution of horsepower, but only for those cars that have an msrp(manufacturer's suggested retail price) less than $25,000. We will keep the limits of the x-axis so that they're similar to that of the first plot, and add a descriptive title.
 
-```{r}
+
+```r
 cars%>%
   filter(msrp<25000)%>%
   ggplot(aes(x=horsepwr))+
@@ -234,6 +332,20 @@ cars%>%
   xlim(c(90, 550)) +
   ggtitle("The distribution of horsepwr for cars with an msrp less than $25,000")
 ```
+
+```
+## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_bin).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_bar).
+```
+
+![](exploring_numerical_data_files/figure-html/unnamed-chunk-10-1.png)<!-- -->
 
 #### Interpreting the conditional histogram
 
@@ -254,25 +366,36 @@ Let us create the following three plots, adding a title to each to indicate the 
 2. A second histogram of horsepower with a binwidth of 30.
 3. A third histogram of horsepower with a binwidth of 60.
 
-```{r}
+
+```r
 # Create hist of horsepwr with binwidth of 3
 cars %>%
   ggplot(aes(horsepwr)) +
   geom_histogram(binwidth = 3) +
   ggtitle("Plot A: A histogram of horsepwr with binwidth of 3")
+```
 
+![](exploring_numerical_data_files/figure-html/unnamed-chunk-11-1.png)<!-- -->
+
+```r
 # Create hist of horsepwr with binwidth of 30
 cars %>%
   ggplot(aes(horsepwr)) +
   geom_histogram(binwidth = 30) +
   ggtitle("Plot B: A histogram of horsepwr with binwidth of 30")
+```
 
+![](exploring_numerical_data_files/figure-html/unnamed-chunk-11-2.png)<!-- -->
+
+```r
 # Create hist of horsepwr with binwidth of 60
 cars %>%
   ggplot(aes(horsepwr)) +
   geom_histogram(binwidth = 60) +
   ggtitle("Plot C: A histogram of horsepwr with binwidth of 60")
 ```
+
+![](exploring_numerical_data_files/figure-html/unnamed-chunk-11-3.png)<!-- -->
 
 #### Binwidths Interpretation
 
@@ -292,12 +415,17 @@ We will apply this method to the msrp column (manufacturer's suggested retail pr
 
 3. Construct a similar box plot of msrp using this reduced dataset. Compare the two plots.
 
-```{r}
+
+```r
 # Construct box plot of msrp
 cars %>%
   ggplot(aes(x = 1, y = msrp)) +
   geom_boxplot()
+```
 
+![](exploring_numerical_data_files/figure-html/unnamed-chunk-12-1.png)<!-- -->
+
+```r
 # Exclude outliers from data
 cars_no_out <- cars %>%
   filter(msrp<100000)
@@ -307,6 +435,8 @@ cars_no_out %>%
   ggplot(aes(x = 1, y = msrp)) +
   geom_boxplot()
 ```
+
+![](exploring_numerical_data_files/figure-html/unnamed-chunk-12-2.png)<!-- -->
 
 
 **Comparing the two plots**
@@ -325,34 +455,64 @@ We will now use density plots and box plots to construct the following visualiza
 
 **Display the distribution of city_mpg**
 
-```{r}
+
+```r
 # Create a box plot of city_mpg
 cars %>%
   ggplot(aes(x=1, y=city_mpg) ) +
   geom_boxplot()
+```
 
+```
+## Warning: Removed 14 rows containing non-finite values (stat_boxplot).
+```
+
+![](exploring_numerical_data_files/figure-html/unnamed-chunk-13-1.png)<!-- -->
+
+```r
 # Create density plot of city_mpg
 cars %>% 
   ggplot(aes(x=city_mpg)) +
   geom_density()
 ```
 
+```
+## Warning: Removed 14 rows containing non-finite values (stat_density).
+```
+
+![](exploring_numerical_data_files/figure-html/unnamed-chunk-13-2.png)<!-- -->
+
 **VOTE**
 Because the city_mpg variable has a much wider range with its outliers, it's best to display its distribution as a box plot. So for this variable the box plot wins.
 
 **Display the distribution of width**
 
-```{r}
+
+```r
 # Create a box plot of width
 cars %>%
   ggplot(aes(x=1, y=width) ) +
   geom_boxplot()
+```
 
+```
+## Warning: Removed 28 rows containing non-finite values (stat_boxplot).
+```
+
+![](exploring_numerical_data_files/figure-html/unnamed-chunk-14-1.png)<!-- -->
+
+```r
 # Create density plot of width
 cars %>% 
   ggplot(aes(x=width)) +
   geom_density()
 ```
+
+```
+## Warning: Removed 28 rows containing non-finite values (stat_density).
+```
+
+![](exploring_numerical_data_files/figure-html/unnamed-chunk-14-2.png)<!-- -->
 
 **VOTE**
 The boxplot doesnt show much about width apart from telling us that it is evenly distributed and has two outliers. However the density plot shows how the distribution is a multimodal one with three modes. This tells us that majority of the observations/cars have widths which fall within the three common widths approximately 68, 72 and 78.
@@ -366,13 +526,24 @@ Faceting is a valuable technique for looking at several conditional distribution
 We will use the common_cyl, which we created to contain only cars with 4, 6, or 8 cylinder, to create a histogram of _**hwy_mpg**_ faceted on both _**ncyl**_ and _**suv**_.
 We will also add a title to this plot to indicate what variables are being faceted on.
 
-```{r}
+
+```r
 # Facet hists using hwy mileage and ncyl
 common_cyl %>%
   ggplot(aes(x =hwy_mpg)) +
   geom_histogram() +
   facet_grid(ncyl ~ suv, labeller = label_both)
 ```
+
+```
+## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+```
+
+```
+## Warning: Removed 11 rows containing non-finite values (stat_bin).
+```
+
+![](exploring_numerical_data_files/figure-html/unnamed-chunk-15-1.png)<!-- -->
 
 
 #### Interpreting the 3 var plot
