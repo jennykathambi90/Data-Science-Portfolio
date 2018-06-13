@@ -314,14 +314,49 @@ cars_no_out %>%
 The precision of the second plot has increased since some of the outliers have been removed.
 
 
+## Plot selection
 
+Consider two other columns in the cars dataset: city_mpg and width. Which is the most appropriate plot for displaying the important features of their distributions? Remember, both density plots and box plots display the central tendency and spread of the data, but the box plot is more robust to outliers. So for the variable that has a much wider range with its outliers, it's best to display its distribution as a box plot.
 
+We will now use density plots and box plots to construct the following visualizations. For each variable, we will try both plots and select the one that is better at capturing the important structure.
 
+1. Display the distribution of city_mpg. Vote
+2. Display the distribution of width. Vote
 
+**Display the distribution of city_mpg**
 
+```{r}
+# Create a box plot of city_mpg
+cars %>%
+  ggplot(aes(x=1, y=city_mpg) ) +
+  geom_boxplot()
 
+# Create density plot of city_mpg
+cars %>% 
+  ggplot(aes(x=city_mpg)) +
+  geom_density()
+```
 
+**VOTE**
+Because the city_mpg variable has a much wider range with its outliers, it's best to display its distribution as a box plot. So for this variable the box plot wins.
 
+**Display the distribution of width**
+
+```{r}
+# Create a box plot of width
+cars %>%
+  ggplot(aes(x=1, y=width) ) +
+  geom_boxplot()
+
+# Create density plot of width
+cars %>% 
+  ggplot(aes(x=width)) +
+  geom_density()
+```
+
+**VOTE**
+The boxplot doesnt show much about width apart from telling us that it is evenly distributed and has two outliers. However the density plot shows how the distribution is a multimodal one with three modes. This tells us that majority of the observations/cars have widths which fall within the three common widths approximately 68, 72 and 78.
+So for width we chose the density plot since it tells us more about the distribution.
 
 
 
