@@ -381,10 +381,33 @@ common_cyl %>%
 2.There are more non-suv cars than suv cars across all cylinder types.
 
 
+# Conclusion
 
+## Histogram versus boxplot
 
+1. The fact that box plots provide more of a summary of a distribution can also be seen as an advantage in certain cases. Sometimes when we're comparing distributions we don't care about overall shape, but rather where the distributions lie with regard to one another. Plotting the quantiles side by side can be a useful way of doing this without distracting us with other details that we may not care about. So, boxplots are better for comparing distributions than histograms!
+  
+ Distribution is basically the spread of a dataset. For example, the median of a dataset is the half-way point. Half of the values are less than the median, and the other half are greater than.
 
+2. . Boxplots are Robust with outliers too.
 
+## Histogram versus density plot
+
+Histograms work very well with fewer data points of a variable, and one wants to make comparisons with groups of another variable. 
+However they will be cluttered when the data points increase since at each data point they show bins for every category of the variable that is being compared with.
+
+So density plots are better as they produce a single line for every category of the variable being used for comparisons.
+
+## Density plots versus box plots
+
+1. Box plots are more robust with missing data.
+2. Density plots are better for plotting a single variable.
+
+## Multivariate data sets: Histogram versus density plots
+
+1. If the data points of the variables are relatively few Use histogram facetted with the other varaibles, if the variables to facet with are many use the color aesthetic instead.
+
+2. However if the data points of the variables are many use a density plot with the color aesthetic.
 
 
 
