@@ -111,22 +111,59 @@ ggplot(cars, aes(x = city_mpg)) +
 3. The non SUVs have more variablity than the SUVs.
 4. It gives us a warning that there are 14 missing values which have been omitted by the plot.
 
+## Boxplots 
+
+The mileage of a car tends to be associated with the size of its engine (as measured by the number of cylinders). To explore the relationship between these two variables, we could stick to using histograms, but in section we'll try  the box plot and in the next section the density plot.
+
+A quick look at unique(cars$ncyl) i.e number of cylinders shows that there are more possible levels of ncyl than you might think. Here, we will restrict our attention to the most common levels by filtering the cars data set with the most common levels.
+
+Which are the most common levels?  We will use the table function to calculate this.
+
+```{r}
+# Let us look at the unique levels of the variable ncyl. There are 8 unique levels.
+unique(cars$ncyl)
+
+#To show the most common levels? It is levels 4,6 and 8.
+table(cars$ncyl)
+
+```
+
+**Interpreting the results:**
+
+1. There are 8 unique levels. i.e -1, 3, 4, 5, 6, 8, 10, 12
+2. The most common levels are 4,6,8. This means that majority of cars have 4, or 6, or 8 number of cylinders.
 
 
+Let us now **filter cars to include only cars with 4, 6, or 8 cylinders** and save the result as common_cyl. We will use the %in% operator.
 
 
+```{r}
+# Filter cars with 4, 6, 8 cylinders
+common_cyl= cars %>%
+            filter(ncyl %in% c(4,6,8) )
+
+# confim if the filtering has occurred
+unique(common_cyl$ncyl)
+```
 
 
+Let us now create side-by-side box plots of city_mpg separated out by ncyl
+
+```{r}
+# Create box plots of city mpg by ncyl
+ggplot(common_cyl, aes(x = as.factor(ncyl), y = city_mpg)) +
+  geom_boxplot()
+
+```
 
 
+**Interpreting the box plot:**
 
-
-
-
-
-
-
-
+1. City miles per decrease with increase in number of cylinders.
+2. There are outliers as shown by the black dots.
+3. The miles of the cars that have 6 cylnders do not vary much. However, the miles of the cars with 8 cylinders vary more and those with 4 cylinders vary most.
+4. The longer upper whisker of the first box plot, shows that majority of cars with 4 cylinders have their mpg varying a lot, however the shorter whiskers of cars with 6 and 8 cylinders tells us that their mpg does not vary much and it tends to center around the average.
+5. Skew of the data, Skew refers to the asymmetry of your data: If you look at cars with 6 cylinders, the box and whiskers are pretty even on either side of the median. However, the distribution of cars with 4 cylinders is skewed towards the lower end since majority of these cars are concentrated on the upper end. This means that majority of cars with 4 cylinders have relatively high mileage.
 
 
 
