@@ -165,11 +165,30 @@ ggplot(common_cyl, aes(x = as.factor(ncyl), y = city_mpg)) +
 4. The longer upper whisker of the first box plot, shows that majority of cars with 4 cylinders have their mpg varying a lot, however the shorter whiskers of cars with 6 and 8 cylinders tells us that their mpg does not vary much and it tends to center around the average.
 5. Skew of the data, Skew refers to the asymmetry of your data: If you look at cars with 6 cylinders, the box and whiskers are pretty even on either side of the median. However, the distribution of cars with 4 cylinders is skewed towards the lower end since majority of these cars are concentrated on the upper end. This means that majority of cars with 4 cylinders have relatively high mileage.
 
+NB: Skewness is only considered in the case of continous variables not categorical variables. NB. city_mpg is continous.
 
+## Density Plot
+A Density Plot visualises the distribution of data over a continuous interval or time period. This chart is a variation of a Histogram that uses kernel smoothing to plot values, allowing for smoother distributions by smoothing out the noise. The peaks of a Density Plot help display where values are concentrated over the interval.
 
+An advantage Density Plots have over Histograms is that they're better at determining the distribution shape because they're not affected by the number of bins used (each bar used in a typical histogram). A Histogram comprising of only 4 bins wouldn't produce a distinguishable enough shape of distribution as a 20-bin Histogram would. However, with Density Plots, this isn't an issue.
 
+Therefore, Kernal density plots are usually a much more effective way to view the distribution of a variable.
 
+Let us now create overlaid density plots of city_mpg colored by ncyl
 
+```{r}
+# Create overlaid density plots for same data
+ggplot(common_cyl, aes(x = city_mpg, fill = as.factor(ncyl))) +
+  geom_density(alpha = .3)
+```
+
+### Interpreting the density plot
+
+1. The highest mileage cars have 4 cylinders.
+2. The typical 4 cylinder car gets better mileage than the typical 6 cylinder car, which gets better mileage than the typical 8 cylinder car.
+3. Most of the 4 cylinder cars get better mileage than even the most efficient 8 cylinder cars.
+4. The variability in mileage of 8 cylinder cars seem much smaller than that of 4 cylinder cars.
+5. Similarly, the variability in mileage of 6 cylinder cars seem much smaller than that of 4 cylinder cars.
 
 
 
