@@ -21,7 +21,7 @@ We will explore the four characteristics of distribution which are:
 1. Measures of center, 
 2. Measures of variability(spread),
 3. The shape of the distribution,
-4. 
+4. Outliers
 
 ## Measure of center
 
@@ -53,3 +53,44 @@ So which one to use?
 2. For non skewed data all of them.
 
 so median and IQR measure the central tendency and spread, respectively, but are robust to outliers and non-normal data.
+
+## The shape of the distribution
+
+The shape of the distribution can be described in terms of the modality and the skew. Density plots are good at displaying shapes of distributions.
+
+### Modality
+
+The number of prominent humps that show up in the distribution. If:
+
+1. Single mode i.e bell curve, the modality/distribution is called unimodal distribution.
+2. Two prominent modes, bimodal.
+3. Three or more modes, multimodal.
+4. No distinct mode because the distribution is flat across all values, uniform.
+ 
+### Skew
+If a distribution has a:
+
+1. Long tail that stretches out to the right, the distribution is referred to as right-skewed.
+2. Long tail that stretches out to the left, the distribution is referred to as left-skewed.
+3. None of the tails is longer than the other, the distribution is referred to as symmetric.
+
+### Transformations
+
+Highly skewed distributions can make it very difficult to learn anything from a visualization. Transformations can be helpful in revealing the more subtle structure. One can use logarithm or square root fucntions to transform the heavily skewed data.
+
+We will focus on the population variable, which exhibits strong right skew, and transform it with the natural logarithm function (log() in R).
+
+
+## Outliers
+Oultiers are observations that have extreme values. They are often interesting cases, and it is good to know about them before proceeding with analysis. 
+
+Oultliers cause distributions to be skewed. Highly skewed distributions can make it very difficult to learn anything from a visualization. Visualizing the data without the outliers can be helpful in revealing the more subtle structure. 
+
+Box plots are good at displaying outliers.
+
+It is often useful to consider oultiers separately from the rest of the data. One can create a new variable for outliers named is_outlier by applying a particula threshhold. This variable is a logical varibale that states whether or not a given observation is an outlier.
+
+One can then plot the data with outliers and without outliers for comparisons. Use filter to filter rows that have outliers or not.
+
+
+
