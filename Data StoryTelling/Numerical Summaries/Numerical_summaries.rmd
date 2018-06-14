@@ -136,20 +136,22 @@ gap2007 %>%
 **Interpreting the above results.**
 1. The life expectancy of Africa varies the most while that of Oceania varies least.
 
-# The shape of the distribution
+## The shape of the distribution
 
-The shape of the distribution can be described in terms of the modality and the skew. Density plots are good at displaying shapes of distributions.
+The shape of the distribution can be described in terms of the modality and the skew.
 
-## Modality
+### Modality
 
 The number of prominent humps that show up in the distribution. If:
 
-1. Single mode i.e bell curve, the modality/distribution is called unimodal distribution.
+1. Single mode i.e bell curve, the modality is called unimodal.
 2. Two prominent modes, bimodal.
 3. Three or more modes, multimodal.
 4. No distinct mode because the distribution is flat across all values, uniform.
  
-## Skew
+
+### Skew
+
 If a distribution has a:
 
 1. Long tail that stretches out to the right, the distribution is referred to as right-skewed.
