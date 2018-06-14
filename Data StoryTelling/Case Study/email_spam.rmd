@@ -1,0 +1,51 @@
+---
+title: "EDA Case Study"
+author: "Jane Kathambi"
+date: "8 June 2018"
+output: 
+  html_document:
+    keep_md: yes
+    theme: united
+    number_sections: true
+    toc: yes
+    toc_depth: 5
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+
+# Introduction
+
+We will explore the email data set.It contains information on all the emails received by a single email account in a single month. Each email is a case(observation). We are interested in the first column that shows if an email is spam or not.
+
+Understand the email data set by reading a help file.
+
+What characteristics of an email are associated with it being spam? Numerical and graphical summaries are a good way to start answering this.
+
+Let us review graphical tools for numerical data.
+
+# Graphical tools for numerical data
+
+## Histograms
+
+Take continous variable and aggregate it into bins. Then draw a bar to the height that corresponds to the number of cases in that bin. Binwidth is the tuning parameter. 
+
+Histograms are good for facetting with the categorical variable.
+
+## Boxplot
+
+Boxplots excel in comparing multiple distributions of a variable i.e the distribution of a continous variable across the different levels of a categorical variable. If the variable has two levels two boxplots for each level are drawn. If it has three levels three box plots for each level are drawn and so on. 
+
+They also show outliers. 
+
+The downside of boxplots is that they hide more complicated dshapes like a bimodal distribution.
+
+## Density Plot
+
+Density plots summarize the data by drawing a smooth line to represent the shape.
+
+Similar to histograms you can change the smoothness of the density plot by changing the bandwidth parameter. The bandwidth parameter for density plots is chosen automatically and is often the best so no need of worrying like when determining the best binwidth for the histogram.
+
+Density plots can be facetted just like histograms or they can be overlaid on one another, by mapping the color or the fill of the distribution to a second variable. If you want the color to be somehow transparent specify an alpha parameter between zero and one.
+
+
