@@ -1,0 +1,352 @@
+---
+title: " EDA of the MBTA ridership data"
+author: "Jane Kathambi"
+date: "8 June 2018"
+output: 
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+    number_sections: true
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+
+
+# Introduction
+The Massachusetts Bay Transportation Authority ("MBTA" or just "the T" for short) manages America's oldest subway, as well as Greater Boston's commuter rail, ferry, and bus systems.
+
+Our goal during EDA is to develop an understanding of our data. The easiest way to do this is to use questions as tools to guide our investigation. When we ask a question, the question focuses our attention on a specific part of our dataset and helps us decide which graphs, models, or transformations to make.
+
+Eda involves use of visualisation and transformation to explore data in a systematic way. It is an iterative cycle. We will:
+
+1. Generate questions about our data.
+
+2. Search for answers by visualising, transforming, and modelling our data.
+
+3. Use what we learn to refine our questions and/or generate new questions.
+
+There is no rule about which questions one should ask to guide research. However, two types of questions will always be useful for making discoveries within our data:
+
+1. What type of variation occurs within our variables?
+
+2. What type of covariation occurs between our variables?
+
+We are going to apply exploratory data analysis on MBTA ridership data. We will use the following questions as our guidline:
+
+1. **QUESTION:** Is out data clean?
+
+    + Is the data tidy?
+    + Are the variables of the correct type?
+    + Are there any outliers and obvious errors?
+2. **QUESTION:**Which is the most commonly used mode of transport?
+3. **QUESTION:**Which is the least commonly used mode of transpot?
+
+# Is out data clean?
+
+
+## Is the data tidy?
+Tidy data is data in which:
+ 
+* Each variable forms a column.
+* Each observation forms a row.
+* Each type of observational unit forms a table.
+
+Let us see if our data is tidy. We will begin by importing the excel data using the readxl package.
+
+_**Import the data first**_
+
+```{r}
+#Load readxl package
+library(readxl)
+
+#Import the data. Skip the header row
+mbta<-read_excel("data/mbta.xlsx", skip=1)
+```
+
+_**Check if the data is tidy**_
+
+```{r}
+
+# View the first 6 rows of mbta
+head(mbta)
+
+# View the entire data set or View(mbta)
+View(mbta)
+
+```
+
+We can see that:
+
+1. There is a unnecessary column. i.e the first column which lists the observations.
+2. There are unnecessary rows:
+
+    + All mode by Qtr row. This 1st row is a quarterly average of weekday MBTA ridership. Since this dataset tracks monthly average ridership, this row does not belong to this data frame. Furthermore, this explains why it has missing data.
+    + Pct Chg / Yr row. This 7th row is not an observation but an analysis
+    + TOTAL row. This 11th row is not an observation but an analysis. 
+
+3. Observations(values) i.e months are stored as columns rather than as rows.
+
+So the data is not tidy.
+
+_**Let us tidy the data**_
+
+```{r}
+#Load tidyr
+library(tidyr)
+
+# Remove the unnecessary column
+mbta1=mbta[,-1]
+View(mbta1)
+
+#remove unnecessary rows
+mbta2=mbta1[-c(1,7,11), ]
+View(mbta2)
+
+#gather all columns except mode and store them as month, thou_riders columns
+mbta3=mbta2%>%
+  gather(month, thou_riders, -mode)
+View(mbta3)
+```
+
+The data i.e mbta3 is now tidy. Let us move on to the next question.
+
+## Are the variables of the correct type?
+
+_**Let us check if the variables are of the correct type**_
+
+```{r}
+#load dplyr
+glimpse(mbta3)
+```
+
+We can see that month and thou_riders are not of the correct type. Mode too as a categorical variable should bea factor.
+
+_**Let us convert month and thou_riders to the correct type**_
+
+```{r}
+#Loading the zoo package to use on month
+library(zoo)
+
+#Let us view the day format
+head(mbta3$month)# It is in the format year-month i.e "2007-03"
+
+#convert the month column into date
+mbta3$month<-as.yearmon(mbta3$month,"%Y-%m") 
+
+#convert thou_riders to numeric
+mbta3$thou_riders<-as.numeric(mbta3$thou_riders) 
+
+#convert mode to factor
+mbta3$mode<-as.factor(mbta3$mode) 
+
+#vewing the str of mbta3
+glimpse(mbta3)
+```
+
+The variable types are now correct. 
+
+4. **QUESTION:** What if we want to look at ridership during every January (for example), the month and year are together in the same column, which makes it a little tricky. Let us separate them.
+
+_**Separating month into new columns month and year**_
+
+```{r}
+# Separating month into new columns year and month
+mbta4=mbta3%>%
+      separate(month, c("month", "year"))
+
+#View mbta4
+View(mbta4)
+```
+
+We are now going to separate the month column into distinct month and year columns to make life easier. We will use the tidyr separate columns function.
+
+Viewing mbta4 shows that month has beed separated into new columns year and month. But month comes before year which is not usually the norm, let us reorder the columns so that year comes before month. Mode should come after month and thou_riders after mode.
+
+_**Reordering Columns: year should come before month**_
+
+```{r}
+#Reordering Columns: year should come before month
+mbta5=mbta4[, c(3,2,1,4)]
+
+#view mbta5
+View(mbta5)
+```
+
+Our data frame, mbta5, is now in the correct ordering of columns, i.e year, month, mode, thou_riders.
+
+
+## Are there any outliers and obvious errors?
+Before you write up any analysis, it's a good idea to screen the data for any obvious mistakes and/or outliers.
+
+There are many valid exploratory techniques for doing this, which include;
+
+    + Summary
+    + Histogram
+    + Box plot
+    + Scatter plot
+
+We will use summary and boxplot.
+
+_**checking for outliers: Summary**_
+
+```{r}
+#use summary
+summary(mbta5)
+```
+
+
+_**checking for outliers: Boxplot**_
+
+```{r}
+# Load library ggplot2
+library(ggplot2)
+
+#plot a box plot of thou_riders and mode
+mbta5%>%
+  ggplot(aes(x=mode, y=thou_riders) )+
+  geom_boxplot()
+```
+
+We see that boat and trackless trolley have missing values.
+Let us draw a zoomed in box plot of boat and trackless trolley.
+
+```{r}
+mbta5%>%
+  filter(mode%in%c("Boat", "Trackless Trolley"))%>%
+  ggplot(aes(x=mode, y=thou_riders) )+
+  geom_boxplot()
+```
+
+Let us look at the summaries of the two modesof transport
+
+```{r}
+#Summary of boat
+mbta5%>%
+  filter(mode=="Boat")%>%
+  summarize(min(thou_riders), median(thou_riders), mean(thou_riders), max(thou_riders))
+
+#summary of Trackless trolley
+mbta5%>%
+  filter(mode=="Trackless Trolley")%>%
+  summarize(min(thou_riders), median(thou_riders), mean(thou_riders), max(thou_riders))
+
+```
+
+Evaluating the statistics for the Boat mode, it seems the 40 value is an obvious error, could be a typo error where a zero was added after 4. So we will replace 40 with 4.
+
+The outliers for the trackless trolley, are overwrapping with the values of boat so dealing with them is not intuitive so we are going to spread the mode column so that we can deal with the outliers easily.
+
+_**Spread the mode column over the thou_riders column**_
+
+```{r}
+#Spread the mode column over the thou_riders column
+mbta6=mbta5%>%
+      spread(mode, thou_riders)
+
+#view the first 6 rows of mbta6
+head(mbta6)
+
+#view internal structure
+glimpse(mbta6)
+```
+
+_**Dealing with the Boat outlier**_
+As seen earlier on the boat outlier is a typo error where a zero was added to 4, solet us replace 40 with 4. We cab verify this by running a summary of the Boat variable which will give us the distribution of the Boat variable.The max value which is 40, is very far from the median and the mean.
+
+```{r}
+#summary of Boat variable
+summary(mbta6$Boat)
+
+# Find the row number of the incorrect value: i
+i<-which(mbta6$Boat==40)
+
+# Replace the incorrect value with 4
+mbta6$Boat[i]<-4
+
+# Generate a boxplot of Boat column to verify that the change occurred
+mbta6%>%
+  ggplot(aes(x=1, y=Boat) )+
+geom_boxplot()
+```
+
+_**Dealing with the Trackless Trolley outliers**_
+
+A boxplot on Trackless Trolley Reveals that the outliers are those values which are below 10. We will convert them to NAs.
+
+```{r}
+#summary of Boat variable
+summary(mbta6$`Trackless Trolley`)
+
+# Generate a boxplot of Trackless Trolley column to look out for the outliers
+mbta6%>%
+  ggplot(aes(x=1, y=`Trackless Trolley`) )+
+geom_boxplot()
+
+# Replace the outliers with NAs
+mbta6$`Trackless Trolley`=ifelse(mbta6$`Trackless Trolley`<10, NA, mbta6$`Trackless Trolley`)
+
+# Generate a boxplot of Trackless Trolley column to verify that the change occurred
+mbta6%>%
+  ggplot(aes(x=1, y=`Trackless Trolley`) )+
+geom_boxplot()
+```
+
+# Which is the most commonly used mode of transport?
+To answer this question well we need to gather the modes of transport into a single column mode. We also need to convert this column to factor. We will also convert the year column to integer.
+
+```{r}
+# gather columns Boat to Trackless Trolley
+mbta7=mbta6%>%
+      gather(mode, thou_riders, -c(year, month) )
+
+#view the first 6 rows of mbta7
+head(mbta7)
+View(mbta7)
+
+#convert types
+mbta7$year=as.integer(mbta7$year)
+mbta7$mode=as.factor(mbta7$mode)
+
+#view internal structure
+glimpse(mbta7)
+
+```
+
+_**Checking for the most commonly used means of transport**_
+
+
+```{r}
+ggplot(mbta7, aes(x = year, y = sqrt(thou_riders), col = mode )) + geom_smooth( se=FALSE) + 
+scale_x_continuous(name = "Year", breaks = c(2007, 2008, 2009, 2010, 2011)) +  
+scale_y_continuous(name = "Avg Weekday Ridership Log(thousands)")
+```
+The most commonly used mode of transport is Heavy rail
+
+
+# Which is the least commonly used mode of transpot?
+
+_**Checking for the least commonly used means of transport**_
+
+```{r}
+ggplot(mbta7, aes(x = year, y = sqrt(thou_riders), col = mode )) + geom_smooth( se=FALSE) + 
+scale_x_continuous(name = "Year", breaks = c(2007, 2008, 2009, 2010, 2011)) +  
+scale_y_continuous(name = "Avg Weekday Ridership Log(thousands)")
+```
+
+The most least commonly used mode of transport is Private bus
+
+
+# How do all the modes of ridership vary during every January?
+
+```{r}
+mbta7%>%
+  filter(month=="Jan")%>%
+ggplot( aes(x = year, y = sqrt(thou_riders), col = mode )) + geom_smooth( se=FALSE) + 
+scale_x_continuous(name = "Year", breaks = c(2007, 2008, 2009, 2010, 2011)) +  
+scale_y_continuous(name = "Avg Weekday Ridership Log(thousands)")
+```
+
+The ridership for the different modes of transport dont seem to vary much every January.
