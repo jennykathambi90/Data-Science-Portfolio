@@ -44,7 +44,7 @@ We are going to apply exploratory data analysis on MBTA ridership data. We will 
 2. **QUESTION:**Which is the most commonly used mode of transport?
 3. **QUESTION:**Which is the least commonly used mode of transpot?
 
-# Is out data clean?
+# Is our data clean?
 
 
 ## Is the data tidy?
@@ -341,7 +341,7 @@ scale_y_continuous(name = "Avg Weekday Ridership Log(thousands)")
 The most least commonly used mode of transport is Private bus
 
 
-# How do all the modes of ridership vary during every January?
+# How do all the modes of ridership vary every January?
 
 ```{r}
 mbta7%>%
