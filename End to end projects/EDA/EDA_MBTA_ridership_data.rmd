@@ -119,6 +119,8 @@ _**Let us check if the variables are of the correct type**_
 
 ```{r}
 #load dplyr
+library(dplyr)
+
 glimpse(mbta3)
 ```
 
