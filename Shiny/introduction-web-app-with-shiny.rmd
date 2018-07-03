@@ -1,0 +1,153 @@
+---
+title: "Introduction to Building Web Apps with Shiny"
+author: "Jane Kathambi"
+date: "2 July 2018"
+output: 
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+runtime: shiny
+---
+
+# Introduction
+
+# Load the required libraries
+
+```{r}
+library(shiny)
+library(dplyr)
+library(ggplot2)
+```
+
+#load the movies data set
+
+We load the data before the UI and Server defenitions so that it can be used in both
+
+```{r}
+movies<- get(load("data/movies.RData") )
+head(movies)
+```
+
+# Initializing the shiny app
+
+## UI definition
+With UI definition we do the following:
+
+* Inputs are defined and laid out. They are defined in the **side bar panel** of the sidebar Layout i.e side bar panel contains input controls.
+
+    + Our **side bar panel** contains three dropdown menus (x,y,color) created with the selectInput widget function.  The selectInput widget is used to allow the user to select which variables should be plotted on the x and y axes of the scatterplot. The selectInput function has four arguments:
+    
+        - An **inputId** is the input value that the app will internally use to access the value selected by the user when building a scatterplot.
+        - A **label** that is displayed in the app.
+        - A list of **choices** to pick from. Note that choices takes a named vector, and the name rather than the value (which must match variable names in the data frame) is displayed to the user.
+        - A **selected** choice for when the app first launches.
+        * Outputs are laid out. They are defined in the **main Panel** of the side bar Layout, i.e main panel contains the output.
+
+    + The **main panel** contains the output elements that get created in the server function. In this case, the main panel contains only one component which is a plot output.
+
+```{r}
+#User Interface. Controls the layout and appearance of App
+#Define UI for application that plots features of movies 
+ui<-fluidPage(
+  
+
+  # Sidebar layout with a input and output definitions 
+  sidebarLayout(
+    
+   # Inputs
+    sidebarPanel( 
+      
+            # Select variable for y-axis
+      selectInput(inputId = "y", 
+                  label = "Y-axis:",
+                  choices = c("IMDB rating" = "imdb_rating", 
+                              "IMDB number of votes" = "imdb_num_votes", 
+                              "Critics score" = "critics_score", 
+                              "Audience score" = "audience_score", 
+                              "Runtime" = "runtime"), 
+                  selected = "audience_score"),
+      
+      
+      # Select variable for x-axis
+     selectInput(inputId = "x", 
+                  label = "X-axis:",
+                  choices = c("IMDB rating" = "imdb_rating", 
+                              "IMDB number of votes" = "imdb_num_votes", 
+                              "Critics score" = "critics_score", 
+                              "Audience score" = "audience_score", 
+                              "Runtime" = "runtime"), 
+                  selected = "critics_score"),
+     
+    # select variable for color
+      selectInput(
+      inputId="z",
+      label="Color by:",
+      choices=c("Title type"="title_type", "Genre"="genre", "MPAA rating"="mpaa_rating", "Critics rating"="critics_rating", "Audience rating"="audience_rating"),
+      selected="mpaa_rating"
+      )
+    
+    ),# end of sidebar panel
+    
+   # Outputs
+    mainPanel(
+      plotOutput(outputId = "scatterplot")
+    )# end of mainPanel
+   
+  )# end of sidebarLayout
+  
+)# end of fluidPage
+```
+
+
+## Server definition
+Defines the relationship between inputs and outputs. 
+
+The **server function** takes three arguments that is input, output and session. Session is used by the application to assess session specific information and functions. For now we will not deal with session.
+
+The **renderPlot function** specifies how the **plotOutput** should be updated.
+
+* Outputs are calculated.
+* Any other calculations needed for outputs are perfomed.
+
+There are three major rules of creating server functions:
+
+* Save objects to display to output$xx in this case output$scatterplot
+* Build objects to display with render*() in this case renderPlot({}). 
+  Reactive outputs should be built with render*() functions. Reactive output meas that output changes with change in input.
+* Use input values with input$xx in this case input$x, input$y and input$z
+
+There are different render fuctions which include:
+
+* renderTable() 
+* DT::renderDataTable()
+* renderImage() 
+* renderText()
+* renderPrint()
+* renderUI()
+
+```{r}
+# Server Fnction. Contains instructions needed to build app
+# Define server function required to create the scatterplot
+server <- function(input, output) {
+
+  # Create scatterplot object the plotOutput function is expecting
+  output$scatterplot <- renderPlot({
+    ggplot(data = movies, aes_string(x = input$x, y = input$y, color = input$z)) +
+      geom_point()
+  })
+}
+
+```
+
+## Creating the Shiny app
+
+```{r}
+# Creates the shiny app object
+shinyApp(ui=ui, server=server)
+```
+
