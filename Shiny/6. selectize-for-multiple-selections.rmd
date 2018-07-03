@@ -23,7 +23,8 @@ How can we select multiple studios to display all at once? We can use:
     + selectInput(inputId, label, choices, selected = NULL, multiple = FALSE,
   selectize = TRUE, width = NULL, size = NULL)
 
-These methods a good when you have a long list to select from.
+These methods are good when you have a long list to select from.
+
 We will use selectInput and set multiple to true. Selectize in selectInput is set to true by default.
 
 There are 211 unique studios represented in this dataset, we need a better way to select than to scroll through such a long list, and we address that with the selectize option, which will suggest names of studios as you type them.
