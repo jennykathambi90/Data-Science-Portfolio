@@ -1,0 +1,127 @@
+---
+title: "UI Inputs, Selectize for multiple selections"
+author: "Jane Kathambi"
+date: "2 July 2018"
+output: 
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+runtime: shiny
+---
+
+# Select to selectize
+
+How can we select multiple studios to display all at once? We can use:
+* selectize. Selectize suggest names of studios as you type them. 
+    + selectizeInput(inputId, ..., options = NULL, width = NULL)
+* selectInput and set multiple to true. Selectize in selectInput is set to true by default.
+    + selectInput(inputId, label, choices, selected = NULL, multiple = FALSE,
+  selectize = TRUE, width = NULL, size = NULL)
+
+
+We will use selectInput and set multiple to true. Selectize in selectInput is set to true by default.
+
+There are 211 unique studios represented in this dataset, we need a better way to select than to scroll through such a long list, and we address that with the selectize option, which will suggest names of studios as you type them.
+
+# Load the required libraries
+We load DT library in addition to shiny, ggplot2, dplyr libraries
+```{r}
+library(shiny)
+library(dplyr)
+library(ggplot2)
+library(DT)
+```
+
+#load the movies data set
+
+We load the data before the UI and Server defenitions so that it can be used in both
+
+```{r}
+movies<- get(load("data/movies.RData") )
+head(movies)
+
+```
+
+# Obtain a list of all the unique studios
+
+Let us obtain a sorted list of all the unique studios.
+
+```{r}
+#a sorted list of all the unique studios
+all_studios <- sort(unique(movies$studio))
+
+```
+
+# Initializing the shiny app
+
+## UI definition
+
+```{r}
+#User Interface. Controls the layout and appearance of App
+#Define UI for application that plots features of movies 
+ui<-fluidPage(
+  
+
+  # Sidebar layout with a input and output definitions 
+  sidebarLayout(
+    
+   # Inputs
+    sidebarPanel( 
+      
+      #select multiple studios
+      selectInput(inputId = "studio",
+                  label = "Select studio:",
+                  choices = all_studios,
+                  selected = "20th Century Fox",
+                   multiple = TRUE)
+    
+    ),# end of sidebar panel
+    
+    # Output: Show data table
+    mainPanel(
+      DT::dataTableOutput(outputId = "moviestable")
+    )# end of mainPanel
+   
+  )# end of sidebarLayout
+  
+)# end of fluidPage
+```
+
+## Server definition
+
+1. Add req(input$n). It prevents an error from being displayed when no studio input is provided.
+
+2. Let the filter() to use the logical operator %in% (instead of ==) so that it works when multiple studios are selected. i.e filter(studio %in% input$studio) %>%
+
+```{r}
+# Server
+server <- function(input, output) {
+  
+  # Create data table
+  output$moviestable <- DT::renderDataTable({
+  req(input$studio)
+    movies_from_selected_studios <- movies %>%
+      filter(studio %in% input$studio) %>%
+      select(title:studio)
+    DT::datatable(data = movies_from_selected_studios, 
+                  options = list(pageLength = 10), 
+                  rownames = FALSE)
+  })
+  
+}
+
+
+```
+
+## Creating the Shiny app
+
+```{r}
+# Creates the shiny app object
+shinyApp(ui=ui, server=server)
+```
+
