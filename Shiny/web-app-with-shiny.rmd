@@ -22,7 +22,6 @@ runtime: shiny
 library(shiny)
 library(dplyr)
 library(ggplot2)
-library(rsconnect)
 ```
 
 #load the movies data set
