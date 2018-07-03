@@ -105,7 +105,7 @@ ui<-fluidPage(
    # Outputs
     mainPanel(
       plotOutput(outputId = "scatterplot"),
-      plotOutput(outputId = "densityplot")
+      plotOutput(outputId = "densityplot", height=200)
     )# end of mainPanel
    
   )# end of sidebarLayout
