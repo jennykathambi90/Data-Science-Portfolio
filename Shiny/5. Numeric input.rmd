@@ -98,12 +98,20 @@ ui<-fluidPage(
 We will:
 3. Server: Add a reactive expression that creates a sample of the data table based on the user input of the sample size.
 
+Run the code and then in the Shiny app (not in the code), delete the numeric value (30) in the sample size box. You will encounter the error: 
+* Error: size is not a numeric or integer vector.
+
+In order to avoid such errors, which users of your app could very easily encounter, we need to hold back the output from being calculated if the input is missing. The req function is the simplest and best way to do this, it ensures that values are available ("truthy") before proceeding with a calculation or action. If any of the given values is not truthy, the operation is stopped by raising a "silent" exception (neither logged by Shiny, nor displayed in the Shiny app's UI).
+
+In the server: Inside the renderDataTable function, add req(input$n) before movies_sample is calculated.
+
 ```{r}
 # Define server function required to create the scatterplot
 server <- function(input, output) {
   
   # Create data table
   output$moviestable <- DT::renderDataTable({
+    req(input$n)
     movies_sample <- movies %>% #we want to only show a sample based on the n input.
       sample_n(input$n) %>%# apply sample_n function to n
       select(title:studio)# select title column up tp studio column
