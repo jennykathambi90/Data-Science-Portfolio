@@ -106,9 +106,30 @@ ui<-fluidPage(
 
 
 ## Server definition
+Defines the relationship between inputs and outputs. 
+
+The **server function** takes three arguments that is input, output and session. Session is used by the application to assess session specific information and functions. For now we will not deal with session.
+
+The **renderPlot function** specifies how the **plotOutput** should be updated.
 
 * Outputs are calculated.
 * Any other calculations needed for outputs are perfomed.
+
+There are three major rules of creating server functions:
+
+* Save objects to display to output$xx in this case output$scatterplot
+* Build objects to display with render*() in this case renderPlot({}). 
+  Reactive outputs should be built with render*() functions. Reactive output meas that output changes with change in input.
+* Use input values with input$xx in this case input$x, input$y and input$z
+
+There are different render fuctions which include:
+
+* renderTable() 
+* DT::renderDataTable()
+* renderImage() 
+* renderText()
+* renderPrint()
+* renderUI()
 
 ```{r}
 # Server Fnction. Contains instructions needed to build app
