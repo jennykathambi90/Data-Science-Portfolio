@@ -1,0 +1,113 @@
+---
+title: "UI Inputs, Date Range"
+author: "Jane Kathambi"
+date: "2 July 2018"
+output: 
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+runtime: shiny
+---
+
+# Date Range
+The date range function:
+
+dateRangeInput(inputId, label, start = NULL, end = NULL, min = NULL,
+  max = NULL, format = "yyyy-mm-dd", startview = "year", weekstart = 0,
+  language = "en", separator = " to ", width = NULL, autoclose = TRUE)
+
+# Load the required libraries
+We load DT library in addition to shiny, ggplot2, dplyr libraries
+```{r}
+library(shiny)
+library(dplyr)
+library(ggplot2)
+```
+
+#load the movies data set
+
+We load the data before the UI and Server defenitions so that it can be used in both
+
+```{r}
+movies<- get(load("data/movies.RData") )
+head(movies)
+
+```
+
+# Obtain the min and max dates from the data
+
+These will be used in the dateRangeInput widget.
+```{r}
+min_date <- min(movies$thtr_rel_date)
+max_date <- max(movies$thtr_rel_date)
+```
+
+# Initializing the shiny app
+
+## UI definition
+
+```{r}
+# UI
+ui <- fluidPage(
+    sidebarLayout(
+    
+    # Input(s)
+    sidebarPanel(
+      
+      # Explanatory text
+      HTML(paste0("Movies released between the following dates will be plotted. 
+                  Pick dates between ", min_date, " and ", max_date, ".")),
+      
+      # Break for visual separation
+      br(), br(),
+      
+      # Date input
+      dateRangeInput(inputId = "date", # date is a vector of two dates i.e start date and end date.  
+                label = "Select dates:",
+                start= "2013-01-01",
+                end= "2014-01-01",
+                startview="year",
+                min = min_date, max = max_date)
+    ),
+    
+    # Output(s)
+    mainPanel(
+      plotOutput(outputId = "scatterplot")
+    )
+  )
+)
+```
+
+## Server definition
+
+```{r}
+# Server
+server <- function(input, output) {
+  
+  # Create the plot
+  output$scatterplot <- renderPlot({
+    req(input$date)
+    movies_selected_date <- movies %>%
+      mutate(thtr_rel_date = as.Date(thtr_rel_date)) %>% # convert thtr_rel_date to Date format
+      filter(thtr_rel_date >= input$date[1] & thtr_rel_date <= input$date[2])
+    ggplot(data = movies_selected_date, aes(x = critics_score, y = audience_score, color = mpaa_rating)) +
+      geom_point()
+  })
+  
+}
+
+
+```
+
+## Creating the Shiny app
+
+```{r}
+# Creates the shiny app object
+shinyApp(ui=ui, server=server)
+```
+
