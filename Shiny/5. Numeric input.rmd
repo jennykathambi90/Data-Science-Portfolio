@@ -1,0 +1,127 @@
+---
+title: "UI Inputs, numeric input"
+author: "Jane Kathambi"
+date: "2 July 2018"
+output: 
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+runtime: shiny
+---
+
+# Introduction
+We are going to show a sample of the movies data as a table. The sample size is determined by the users input. We will use the renderDataTable function from the DT package to render the table.
+
+We are going to add a numericInput that specifies the sample size. We will add the following:
+1. UI: Add an numericInput widget that the user can interact with to select the sample size.
+2. UI: Add an output defining where the data table should appear.
+3. Server: Add a reactive expression that creates a sample of the data table based on the user input of the sample size.
+
+
+# Load the required libraries
+We load DT library in addition to shiny, ggplot2, dplyr libraries
+```{r}
+library(shiny)
+library(dplyr)
+library(ggplot2)
+library(DT)
+```
+
+#load the movies data set
+
+We load the data before the UI and Server defenitions so that it can be used in both
+
+```{r}
+movies<- get(load("data/movies.RData") )
+head(movies)
+
+```
+
+# Calculate total number of movies
+
+We calculate n_total (total number of movies in the dataset) as nrow(movies) before the UI definition. We willuse this total when creating the numeric input widget as well as to render the table.
+
+```{r}
+#Calculate n_total (total number of movies in the dataset)
+n_total <- nrow(movies)
+```
+
+# Initializing the shiny app
+
+## UI definition
+We will:
+1. UI: Add an numericInput widget that the user can interact with to select the sample size.
+2. UI: Add an output defining where the data table should appear.
+
+```{r}
+#User Interface. Controls the layout and appearance of App
+#Define UI for application that plots features of movies 
+ui<-fluidPage(
+  
+
+  # Sidebar layout with a input and output definitions 
+  sidebarLayout(
+    
+   # Inputs
+    sidebarPanel( 
+      
+      # Text instructions
+      HTML(paste("Enter a value between 1 and", n_total)),
+      
+      # Numeric input for sample size
+      numericInput(inputId = "n",
+                   label = "Sample size:",
+                   min=1,
+                   max=n_total,
+                   value = 30,
+                   step = 1)
+    
+    ),# end of sidebar panel
+    
+    # Output: Show data table
+    mainPanel(
+      DT::dataTableOutput(outputId = "moviestable")
+    )# end of mainPanel
+   
+  )# end of sidebarLayout
+  
+)# end of fluidPage
+```
+
+
+## Server definition
+We will:
+3. Server: Add a reactive expression that creates a sample of the data table based on the user input of the sample size.
+
+```{r}
+# Define server function required to create the scatterplot
+server <- function(input, output) {
+  
+  # Create data table
+  output$moviestable <- DT::renderDataTable({
+    movies_sample <- movies %>% #we want to only show a sample based on the n input.
+      sample_n(input$n) %>%# apply sample_n function to n
+      select(title:studio)# select title column up tp studio column
+    
+    #Then render the movies_sample using DT::datatable() function
+    DT::datatable(data = movies_sample, 
+                  options = list(pageLength = 10), #10 rows per window
+                  rownames = FALSE)# dont show row counts/names.
+  })
+  
+}
+
+```
+
+## Creating the Shiny app
+
+```{r}
+# Creates the shiny app object
+shinyApp(ui=ui, server=server)
+```
+
