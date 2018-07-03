@@ -1,0 +1,148 @@
+---
+title: "UI Inputs, checkbox input"
+author: "Jane Kathambi"
+date: "2 July 2018"
+output: 
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+runtime: shiny
+---
+
+# Introduction
+We already have a predefined sidebarLayout. This layout has two drop down menus defined for the x and y input and one output which is a scatter plot.
+We also have a predefined server functions which plots out/renders the scatterplot based on the user input.
+
+We are going to add a checkbox input that specifies whether the plotted data should be shown in a data table. We will add the following:
+1. UI: Add an input widget that the user can interact with to check/uncheck the box
+2. UI: Add an output defining where the data table should appear.
+3. Server: Add a reactive expression that creates the data table if the checkbox is checked
+
+
+# Load the required libraries
+We load DT library in addition to shiny, ggplot2, dplyr libraries
+```{r}
+library(shiny)
+library(dplyr)
+library(ggplot2)
+library(DT)
+```
+
+#load the movies data set
+
+We load the data before the UI and Server defenitions so that it can be used in both
+
+```{r}
+movies<- get(load("data/movies.RData") )
+head(movies)
+```
+
+# Initializing the shiny app
+
+## UI definition
+We will:
+1. UI: Add an input widget that the user can interact with to check/uncheck the box
+2. UI: Add an output defining where the data table should appear.
+
+```{r}
+#User Interface. Controls the layout and appearance of App
+#Define UI for application that plots features of movies 
+ui<-fluidPage(
+  
+
+  # Sidebar layout with a input and output definitions 
+  sidebarLayout(
+    
+   # Inputs
+    sidebarPanel( 
+      
+            # Select variable for y-axis
+      selectInput(inputId = "y", 
+                  label = "Y-axis:",
+                  choices = c("IMDB rating" = "imdb_rating", 
+                              "IMDB number of votes" = "imdb_num_votes", 
+                              "Critics score" = "critics_score", 
+                              "Audience score" = "audience_score", 
+                              "Runtime" = "runtime"), 
+                  selected = "audience_score"),
+      
+      
+      # Select variable for x-axis
+     selectInput(inputId = "x", 
+                  label = "X-axis:",
+                  choices = c("IMDB rating" = "imdb_rating", 
+                              "IMDB number of votes" = "imdb_num_votes", 
+                              "Critics score" = "critics_score", 
+                              "Audience score" = "audience_score", 
+                              "Runtime" = "runtime"), 
+                  selected = "critics_score"),
+      
+      # Add a checkbox widget
+     checkboxInput(inputId = "show_data", 
+                  label = "Show Data Table:",
+                  value=TRUE #TRUE means that the box is initially checked
+                  )
+    
+    ),# end of sidebar panel
+    
+   # Outputs
+    mainPanel(
+      
+      # show scatterplot
+      plotOutput(outputId = "scatterplot"),
+      
+      #show data table
+      DT::dataTableOutput(outputId = "moviestable")
+      
+    )# end of mainPanel
+   
+  )# end of sidebarLayout
+  
+)# end of fluidPage
+```
+
+
+## Server definition
+We will:
+3. Server: Add a reactive expression that creates the data table if the checkbox is checked
+```{r}
+# Server Fnction. Contains instructions needed to build app
+# Define server function required to create the scatterplot
+server <- function(input, output) {
+
+  # Create scatterplot object the plotOutput function is expecting
+  output$scatterplot <- renderPlot({
+    ggplot(data = movies, aes_string(x = input$x, y = input$y)) +
+      geom_point(alpha=0.4)
+  })
+  
+  # Print data table if checked
+  output$moviestable<-DT::renderDataTable(
+    {
+      if(input$show_data)
+      {
+        DT::datatable(
+          data = movies%>%select(1:7), #select the first up to the seventh column
+          options = list(pageLength=50),# number of rows per window
+          rownames = FALSE #do not show row names i.e numbering
+          
+        )
+      }
+    }
+  )
+}
+
+```
+
+## Creating the Shiny app
+
+```{r}
+# Creates the shiny app object
+shinyApp(ui=ui, server=server)
+```
+
