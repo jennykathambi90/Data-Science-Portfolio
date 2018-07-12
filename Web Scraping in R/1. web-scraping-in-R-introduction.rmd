@@ -1,0 +1,39 @@
+---
+title: "Web Scraping in R: Introduction"
+author: "Jane Kathambi"
+date: "11 July 2018"
+output: 
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+
+# Introduction
+
+Most of the useful data in the world, from economic data to news content to geographic information, lives somewhere on the internet - and we are going to learn how to access it. 
+
+We'll explore how to:
+
+1. Work with APIs (computer-readable interfaces to websites), to access data from Wikipedia and other sources,
+
+2. Build our own simple API client, 
+
+3. For those occasions where APIs are not available, we'll find out how to use R to scrape information out of web pages. In the process we'll learn how to get data out of even the most stubborn website, and how to turn it into a format ready for further analysis. 
+
+The packages we'll use are:
+
+1. rvest, 
+2. httr, 
+3. xml2 and 
+4. jsonlite, 
+5. along with particular API client packages like:
+    + WikipediR and 
+    + pageviews.
+    + birdnik, an API client for the Wordnik API
+
+

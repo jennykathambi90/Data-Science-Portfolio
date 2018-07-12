@@ -1,0 +1,89 @@
+---
+title: "APIs and API clients to interact with API"
+author: "Jane Kathambi"
+date: "11 July 2018"
+output: 
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+# Introduction
+
+We are goig to explore how to use APIs when pre-existing API clients are available.
+
+# Load the required libraries
+
+Let us load some API clients and the dplyr function for viewing our data.
+
+```{r}
+library(birdnik)# an API client for the Wordnik API
+library(pageviews)# an API client to Wikipedia's API of pageview data
+library(dplyr)
+```
+
+# Application Interfaces (API)
+
+So far we have downloaded and saved static files which are formatted files either csv or tsv. However most data in the internet does not take that form. It is not practical to convert data to static files for download. It is time consuming.
+
+Solution? People often make data available behind APIs. These are programs that are designed to make parts of a website available to computers. In other words APIs are server components to make it easy for your code to interact with a service and get data from it.
+
+# Using API clients
+
+So we know that **APIs** are server components to make it easy for your code to interact with a service and get data from it. 
+
+We also know that R features many **"clients"** - packages that wrap around connections to APIs so you don't have to worry about the details.
+
+Let's look at a really simple API client - the pageviews package, which acts as a client to Wikipedia's API of pageview data. As with other R API clients, it's formatted as a package, and lives on CRAN - the central repository of R packages. The goal here is just to show how simple clients are to use: they look just like other R code, because they are just like other R code.
+
+```{r}
+# Load pageviews package which acts as a client to Wikipedia's API of pageview data
+# akready loaded
+
+# Use the article_pageviews() function to get the pageviews for the article "Hadley Wickham".
+hadley_pageviews <- article_pageviews(project = "en.wikipedia",  "Hadley Wickham")
+
+# Examine the resulting object
+glimpse(hadley_pageviews)
+```
+
+# Access Tokens and APIs
+
+It's common for APIs to require access tokens - unique keys that verify you're authorised to use a service. In case you hog the servers of the API providers you will be locked out. They're usually pretty easy to use with an API client.
+
+To show how they work, and how easy it can be, we're going to use the R client, 'birdnik', for the Wordnik dictionary and word use service. We will also use an API token we prepared earlier. You can request for your own token or access key from the websites of interest.
+
+Birdnik is fairly simple and lets you get all sorts of interesting information about word usage in published works. For example, to get the frequency of the use of the word "chocolate", you would write:
+
+_**word_frequency(api_key, "chocolate")**_
+
+In this exercise we're going to look at the word "vector" (since it's a common word in R!) using a pre-existing API key (stored as api_key)
+
+
+```{r}
+# Load birdnik API client for the Wordnik API
+# already loaded
+
+#api key
+api_key="d8ed66f01da01b0c6a0070d7c1503801993a39c126fbc3382"
+
+# Get the word frequency for "vector", using api_key to access it from Wordnik's database
+vector_frequency <- word_frequency(api_key, "vector")
+
+# view the first six rows of the data frame
+head(vector_frequency)
+```
+
+
+
+
+
+
+
+
+
+

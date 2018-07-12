@@ -1,0 +1,80 @@
+---
+title: "Respectful API Usage"
+author: "Jane Kathambi"
+date: "11 July 2018"
+output: 
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+
+# Introduction
+
+There are two aspects of respectful API usage:
+1. User Agents
+2. Rate Limiting
+
+# Load the required libraries
+
+```{r}
+library(httr)
+```
+
+# User agents
+
+* Bits of text that ID your browser (or software)
+* Gives the server some idea of what you're trying to do
+* You can set one with your requests with user_agent()
+* Add an email address so they can contact you.
+
+Informative user-agents are a good way of being respectful of the developers running the API you're interacting with. They make it easy for them to contact you in the event something goes wrong. I always try to include:
+
+1. My email address;
+2. A URL for the project the code is a part of, if it's got a URL.
+
+Building user agents is done by passing a call to user_agent() into the GET() or POST() request; something like:
+
+GET("http://url.goes.here/", user_agent("somefakeemail@domain.com http://project.website"))
+
+In the event you don't have a website, a short one-sentence description of what the project is about serves pretty well.
+
+```{r}
+# Do not change the url
+url <- "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/all-agents/Aaron_Halfaker/daily/2015100100/2015103100"
+
+# Add the email address and the test sentence inside user_agent()
+server_response <- GET(url, user_agent("my@email.address this is a test"))
+```
+
+ From your end, the request looks exactly the same with or without a user agent, but for the server the difference can be vital.
+
+# Rate limiting
+
+* Too many requests makes for a sad server
+* Deliberately slows down your code to keep under a desired 'rate'
+* Slows you, but avoids getting you banned from the server
+
+Rate-limiting: making sure you only make a certain number of requests to the server in a given time period. 
+
+Your limit will vary from server to server, but the implementation is always pretty much the same and involves a call to Sys.sleep(). This function takes one argument, a number, which represents the number of seconds to "sleep" (pause) the R session for. So if you call Sys.sleep(15), it'll pause for 15 seconds before allowing further code to run.
+
+As you can imagine, this is really useful for rate-limiting. If you are only allowed 4 requests a minute? No problem! Just pause for 15 seconds between each request and you're guaranteed to never exceed it. Let's demonstrate how by putting together a little loop that sends multiple requests, on a 5-second time delay.
+
+```{r}
+# Construct a vector of 2 URLs
+urls <- c("http://fakeurl.com/api/1.0/", "http://fakeurl.com/api/2.0/")
+
+for(url in urls){
+    # Send a GET request to url
+    result <- GET(url)
+    # Delay for 5 seconds between requests
+    Sys.sleep(5)
+}
+```
+
+With this and the user agents we covered in the last exercise, you know enough to avoid annoying servers - and thus snarling up your code.

@@ -1,0 +1,168 @@
+---
+title: "Web scraping 101: With XPATHS"
+author: "Jane Kathambi"
+date: "11 July 2018"
+output: 
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+
+# Web scraping 101 with xpaths
+What if you dont have a server API and you want to scrape data? You use rvest read_html(url) function to obtain the webpage in xml format. We then later use rvest functions (html_node(), html_text()) to scrape the data.
+
+I case we use an API to read in data we tell it to return the xml format.
+
+The first step with web scraping is actually reading the HTML in. This can be done with a function from xml2, which is imported by rvest - read_html(). 
+
+This accepts a single URL, and returns a big blob of XML that we can use further on.
+
+We're going to experiment with that by grabbing Hadley Wickham's wikipedia page, with rvest, and then printing it just to see what the structure looks like.
+
+#Using XPATHS to scrape nodes
+We use the html_node() function with two arguments:
+1. The xml document/data
+2. The xpath
+
+# Load the required libraries
+
+```{r}
+library(rvest)
+```
+
+# Hadley Wickham's wikipedia page
+
+Let us now grab Hadley Wickham's wikipedia page, with rvest, and then printing it just to see what the structure looks like.
+
+```{r}
+# Hadley Wickham's Wikipedia page
+test_url <- "https://en.wikipedia.org/wiki/Hadley_Wickham"
+
+# Read the URL stored as "test_url" with read_html()
+test_xml <- read_html(test_url)
+
+# Print test_xml
+test_xml
+```
+
+# Extracting nodes by XPATH
+Now you've got a HTML page read into R. Great! But how do you get individual, identifiable pieces of it?
+
+The answer is to use html_node(), which extracts individual chunks of HTML from a HTML document. There are a couple of ways of identifying and filtering nodes, and for now we're going to use XPATHs: unique identifiers for individual pieces of a HTML document.
+
+These can be retrieved using a browser gadget we'll talk about later - in the meanwhile the XPATH for the information box in the page you just downloaded is stored as test_node_xpath. We're going to retrieve the box from the HTML doc with html_node(), using test_node_xpath as the xpath argument.
+
+```{r}
+#XPATH
+test_node_xpath<-"//*[contains(concat( \" \", @class, \" \" ), concat( \" \", \"vcard\", \" \" ))]"
+
+# Use html_node() to grab the node with the XPATH 
+node <- html_node(x = test_xml, xpath = test_node_xpath)
+
+# Print the first element of the result
+node[[1]]
+```
+
+XML nodes are the building block of an XML document - extracting them leads to everything else. At the moment, they're still kind of abstract objects: we'll dig into their contents later on.
+
+# HTML structure
+
+Extracting information
+
+* html_text(x = ___) - get text contents
+* html_attr(x = ___, name = ___) - get specific attribute
+* html_name(x = ___) - get tag name
+
+## Lets extract the table element
+Go to hadley wickham's page on wikipedia
+Right click anywhere on the page and click inspect to inspect the html structure.
+You will notice that the information we are interested in is conatined in an html table. 
+Let us go ahead and extract this html table element. NB: it is the only table.
+It contains information about hadley wickham.
+
+```{r}
+table_element=html_node(test_xml, xpath='//table')
+
+```
+
+
+## Extracting names
+The first thing we'll grab is a name, from the first element of the previously extracted table_element data. We can do this with html_name(). As you may recall when you inspected hadley's wikipedia page, the table element has the tag <table>...</table>, so we'd expect the name to be, well, table.
+
+```{r}
+html_name(table_element)
+```
+
+## Extracting contents of the table
+We use html_text()
+
+```{r}
+html_text(table_element)
+```
+
+##Converting table element into a data frame
+We use html_text()
+
+```{r}
+hadley_data_frame=html_table(table_element)
+
+```
+
+##Inspecting the data frame
+Use the view function to view it.
+
+You notice that the column names are not correct, and there are two empty rows
+
+```{r}
+View(hadley_data_frame)
+```
+
+##Cleaning up the data frame
+1. Change column names to reasonable names
+2. Remove the empty row
+
+```{r}
+# assign the data frame new column names
+names(hadley_data_frame)=c("key", "value")
+
+# verify that the column names have been changed
+names(hadley_data_frame)
+
+# remove empty rows
+hadley_data_frame_clean=hadley_data_frame%>%
+  subset(key!="")
+
+# verify empty rows have beeen removed
+View(hadley_data_frame)
+```
+
+# Wrap up
+Scraping
+```{r}
+hadley_data_frame=test_url%>% # url of a webpage
+                      read_html()%>% # returns xml document of the webpage 
+                      html_node(xpath='//table')%>% # returns the table element
+                      html_table() #converts the table element to a dataframe
+
+# view the data frame
+View(hadley_data_frame)
+
+# clean the data frame
+# assign the data frame new column names                      
+names(hadley_data_frame)= c("key", "value")
+
+# remove empty rows
+hadley_data_frame_clean=hadley_data_frame%>%
+  subset(key!="")
+
+# view the data frame
+View(hadley_data_frame_clean)
+```
+
+
+

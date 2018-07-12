@@ -1,0 +1,220 @@
+---
+title: "Handling XML"
+author: "Jane Kathambi"
+date: "11 July 2018"
+output: 
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+
+# Overview
+
+Sometimes data is a TSV or nice plaintext output. Sometimes it's XML and/or JSON. 
+
+This chapter walks you through what XML is, how to convert xml into R-like objects, and how to extract data from them. 
+
+You'll practice by examining the revision history for a Wikipedia article retrieved from the Wikipedia API using httr and xml2.
+
+An API returns various data formats but the two most common data formats are:
+1. xml
+2. json
+
+Lets check out xml.
+
+# xml
+
+
+# Load the required libraries
+
+```{r}
+library(xml2)
+
+```
+
+# Examining XML documents
+Just like JSON, you should first verify the response is indeed XML with http_type() and by examining the result of content(r, as = "text"). Then you can turn the response into an XML document object with read_xml().
+
+One benefit of using the XML document object is the available functions that help you explore and manipulate the document. For example xml_structure() will print a representation of the XML document that emphasizes the hierarchical structure by displaying the elements without the data.
+
+In this exercise you'll grab the same revision history you've been working with as XML, and take a look at it with xml_structure().
+
+Let us begin by writing a function to get the revision history for the Wikipedia article for "Hadley Wickham".
+
+```{r}
+rev_history <- function(title, format = "json"){
+  
+  if (title != "Hadley Wickham") {
+    stop('rev_history() only works for `title = "Hadley Wickham"`')
+  }
+  
+  if (format == "json"){
+    resp <- readRDS("had_rev_json.rds")
+  } 
+  
+  else if (format == "xml"){
+    resp <- readRDS("had_rev_xml.rds")
+  } 
+  
+  else {
+    stop('Invalid format supplied, try "json" or "xml"')
+  }
+  
+  resp  
+}
+
+```
+
+
+Let us use our function to obtain the revision history for "Hadley Wickham"
+
+Get the XML version of the revision history for the Wikipedia article for "Hadley Wickham", by calling rev_history("Hadley Wickham", format = "xml"), store it in resp_xml.
+
+```{r}
+# Get XML revision history
+resp_xml <- rev_history("Hadley Wickham", format = "xml")
+```
+
+Check the response type of resp_xml to confirm the API returned an XML object.
+```{r}
+# Check response is XML 
+http_type(resp_xml)
+```
+
+You can't always trust a header, so check the content looks like XML by calling content() on resp_xml with as = "text", store in rev_text.
+
+```{r}
+# Examine returned text with content()
+rev_text <- content(resp_xml, as="text")
+rev_text
+```
+
+Turn rev_text into an XML object with read_xml() from the xml2 package, store as rev_xml.
+
+```{r}
+# Turn rev_text into an XML document
+rev_xml <- read_xml(rev_text)
+```
+
+Call xml_structure() on rev_xml to see the structure of the returned XML. Can you see where the revisions are?
+
+```{r}
+# Examine the structure of rev_xml
+xml_structure(rev_xml)
+```
+
+xml_structure() helps you understand the structure of your document, without overwhelming you with content.
+
+# Extracting XML data
+XPATHs are designed to specifying nodes in an XML document. Remember /node_name specifies nodes at the current level that have the tag node_name, where as //node_name specifies nodes at any level below the current level that have the tag node_name.
+
+xml2 provides the function xml_find_all() to extract nodes that match a given XPATH. For example, xml_find_all(rev_xml, "/api") will find all the nodes at the top level of the rev_xml document that have the tag api. Try running that in the console. You'll get a nodeset of one node because there is only one node that satisfies that XPATH.
+
+The object returned from xml_find_all() is a nodeset (think of it like a list of nodes). To actually get data out of the nodes in the nodeset, you'll have to explicitly ask for it with xml_text() (or xml_double() or xml_integer()).
+
+Use what you know about the location of the revisions data in the returned XML document extract just the content of the revision.
+
+Before doing anything first look at the structure of the xml documet using xml_structure(rev_xml)
+```{r}
+xml_structure(rev_xml)
+```
+
+Use xml_find_all() on rev_xml to find all the nodes that describe revisions by using the XPATH, "/api/query/pages/page/revisions/rev".
+
+```{r}
+# Find all nodes using XPATH "/api/query/pages/page/revisions/rev"
+xml_find_all(rev_xml, "/api/query/pages/page/revisions/rev")
+```
+
+
+Use xml_find_all() on rev_xml to find all the nodes that are in a rev node anywhere in the document, store in rev_nodes.
+
+```{r}
+rev_nodes<-xml_find_all(rev_xml, "//rev")
+```
+
+Extract the contents from each node in rev_nodes, by passing rev_nodes to xml_text().
+
+```{r}
+# Use xml_text() to get text from rev_nodes
+xml_text(rev_nodes)
+```
+
+# Extracting XML attributes
+Not all the useful data will be in the content of a node, some might also be in the attributes of a node. 
+
+To extract attributes from a nodeset, xml2 provides xml_attrs() and xml_attr().
+
+xml_attrs() takes a nodeset and returns all of the attributes for every node in the nodeset. 
+
+xml_attr() takes a nodeset and an additional argument attr to extract a single named argument from each node in the nodeset.
+
+In this exercise you'll grab the user and anon attributes for each revision.
+
+You'll see xml_find_first() in the sample code. It works just like xml_find_all() but it only extracts the first node it finds.
+
+Extract rev_nodes and first_rev_node in the document.
+```{r}
+#Extract rev_nodes
+rev_nodes=xml_find_all(rev_xml,"//rev")
+
+first_rev_node=xml_find_first(rev_xml,"//rev")
+```
+
+
+Now it is time to explore the difference between xml_attrs() and xml_attr().
+
+Use xml_attrs() on first_rev_node to see all the attributes of the first revision node.
+
+```{r}
+# Find all attributes with xml_attrs() for first_rev_node
+xml_attrs(first_rev_node)
+```
+
+Use xml_attr() on first_rev_node along with an appropriate attr argument to extract the user attribute from the first revision node.
+
+```{r}
+# Find user attribute with xml_attr() for first_rev_node
+xml_attr(first_rev_node, attr='user')
+```
+
+Now use xml_attr() again, but this time on rev_nodes to extract the user attribute from all revision nodes.
+
+```{r}
+# Find user attribute for all rev nodes
+xml_attr(rev_nodes, attr='user')
+```
+
+Use xml_attr() on rev_nodes to extract the anon attribute from all revision nodes.
+```{r}
+# Find anon attribute for all rev nodes
+xml_attr(rev_nodes, attr='anon')
+```
+
+If a node didn't have the anon attribute xml_attr() returned an NA
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
