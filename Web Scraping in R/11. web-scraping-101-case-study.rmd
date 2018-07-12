@@ -260,14 +260,3 @@ Grace_Hopper
 
 
 Wow, great work! You put together everything you've learn to make a useful API function. The function isn't perfect: you may notice it fails rather ungracefully if you ask for a page that doesn't exist, or a person without an infobox.
-
-
-
-
-
-
-
-
-
-
-
