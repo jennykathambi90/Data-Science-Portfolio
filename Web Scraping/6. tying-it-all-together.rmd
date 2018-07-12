@@ -1,0 +1,153 @@
+---
+title: "Tying it all together"
+author: "Jane Kathambi"
+date: "11 July 2018"
+output: 
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+
+# Tying it all together
+Using everything that you learned in the chapter, let's make a simple replica of one of the 'pageviews' functions - building queries, sending GET requests (with an appropriate user agent) and handling the output in a fault-tolerant way.
+
+You'll build this function up piece by piece in this exercise.
+
+To output an error, you will use the function stop(), which takes a string as an argument, stops the execution of the program, and outputs the string as an error.
+
+You can try it right now by running stop("This is an error").
+
+# Load the required libraries
+
+```{r}
+library(httr)
+```
+
+# First, get the function to construct the url.
+
+We will Construct a query: Directory based API urls.
+
+In the call to paste(), add article_title as the second argument to construct url
+
+```{r}
+get_pageviews <- function(article_title){
+  
+  # construct the url
+  
+  url <- paste(
+    "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/all-agents", 
+    
+    # Include article_title
+    article_title, 
+    
+    "daily/2015100100/2015103100", 
+    
+    sep = "/"
+  ) 
+  
+  # Return the url
+  url
+}
+```
+
+# Now, make the request.
+
+Use GET() to request url with a user agent "my@email.com this is a test"
+
+```{r}
+get_pageviews <- function(article_title){
+  
+  # construct the url
+  
+  url <- paste(
+    "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/all-agents", 
+    
+    article_title, 
+    
+    "daily/2015100100/2015103100", 
+    
+    sep = "/"
+  ) 
+  
+  # Get the webpage  
+  response <- GET(url, config = user_agent("my@email.com this is a test")) 
+  
+  # Return the response
+  response
+}
+```
+
+# Now, add an error check.
+
+Check the response for errors with http_error(), throwing an error of "the request failed" with stop() if there was one.
+
+```{r}
+get_pageviews <- function(article_title){
+  
+  # construct the url
+  
+  url <- paste(
+    "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/all-agents", 
+    
+    article_title, 
+    
+    "daily/2015100100/2015103100", 
+    
+    sep = "/"
+  ) 
+  
+  
+  # Get the webpage  
+  
+  response <- GET(url, config = user_agent("my@email.com this is a test")) 
+  
+  # Is there an HTTP error?
+  if(http_error(response)){ 
+    # Throw an R error
+     stop("the request failed") 
+  }
+  
+  # Return the response
+  response
+}
+```
+
+# Return content of response instead of response
+
+Finally, instead of returning response, return the content() of the response.
+
+```{r}
+get_pageviews <- function(article_title){
+  
+  # construct the url
+  
+  url <- paste(
+    "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/all-agents", 
+    
+    article_title, 
+    
+    "daily/2015100100/2015103100", 
+    
+    sep = "/"
+  ) 
+  
+  
+  # Get the webpage  
+  
+  response <- GET(url, config = user_agent("my@email.com this is a test")) 
+  
+  # Is there an HTTP error?
+  if(http_error(response)){ 
+    # Throw an R error
+     stop("the request failed") 
+  }
+  
+  # Return the response's content
+  content(response)
+}
+```

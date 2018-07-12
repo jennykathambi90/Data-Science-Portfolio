@@ -1,0 +1,209 @@
+---
+title: "Using httr to interact with APIs directly"
+author: "Jane Kathambi"
+date: "11 July 2018"
+output: 
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+
+# Introduction
+
+If an API client doesn't exist, it's up to you to communicate directly with the API. But don't worry, the package `httr` makes this really straightforward. 
+
+In this chapter we'll learn how to make web requests from R, how to examine the responses we get back and some best practices for doing this in a responsible way.
+
+`httr` is designed to map closely to the underlying http protocol. It is written by Hadley Wickham (of course), which makes HTTP requests extremely easy.
+
+# Load the required libraries
+
+```{r}
+library(httr)
+library(dplyr)
+```
+
+# GET requests
+
+To start with we're going to make a GET request. This is a request that asks the server to give you a particular piece of data or content (usually specified in the URL). 
+
+These make up the majority of the requests we'll make in a data science context, since most of the time we'll be getting data from servers, not giving it to them.
+
+To do this we'll use the httr package. We're going to make a very simple GET request, and then inspect the output to see what it looks like.
+
+```{r}
+# Make a GET request to http://httpbin.org/get
+get_result <- GET("http://httpbin.org/get")
+
+# Print it to inspect it
+get_result
+```
+
+# POST requests
+
+We'll look at POST requests, also made through httr, with the function POST().
+
+Rather than asking the server to give you something, as in GET requests, a POST request asks the server to accept something from you. 
+
+They're commonly used for things like **file upload**, or **authentication**. 
+
+As a result of their use for uploading things, POST() accepts not just a url but also a body argument containing whatever you want to give to the server.
+
+We'll make a very simple POST request, just uploading a piece of text, and then inspect the output to see what it looks like.
+
+```{r}
+# Make a POST request to http://httpbin.org/post with the body "this is a test"
+
+post_result <- POST("http://httpbin.org/post", body=c("this is a test"))
+
+# Print it to inspect it
+post_result
+
+```
+
+The output for POST requests looks pretty similar to that for GET requests, although (in this case) the body of your message is included - this is a test.
+
+# Extracting the response
+
+Making requests is all well and good, but it's also not why you're here. What we really want to do is get the data the server sent back, which can be done with httr's content() function. You pass it an object returned from a GET (or POST, or DELETE, or...) call, and it spits out whatever the server actually sent in an R-compatible structure.
+
+We're going to demonstrate that now, using a slightly more complicated URL than before - in fact, using a URL from the Wikipedia pageviews system (API) you dealt with through the pageviews package (an API client). 
+
+Without looking too much at the structure for the time being (we'll get to that later) this request asks for the number of pageviews to the English-language Wikipedia's "Hadley Wickham" article on 1 and 2 January 2017.
+
+```{r}
+# url
+url= "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia.org/all-access/all-agents/Hadley_Wickham/daily/20170101/20170102"
+  
+# Make a GET request to url and save the results
+pageview_response <- GET(url)
+
+# Call content() to retrieve the data the server sent back
+pageview_data <- content(pageview_response)
+
+# Examine the results with glimpse()
+glimpse(pageview_data)
+```
+
+As you can see, the result of extracting the content is a list, which is pretty common (but not uniform) to API responses. We'll talk through how to manipulate returned data later on.
+
+# Graceful httr
+
+## Error handling
+
+__Status codes__
+
+* Code starts with:
+    + 2 - great!
+    + 3 - great!
+    + 4 - your code is broken
+    + 5 - their code is broken
+    
+* [Check out wikipedia for the http status codes:](https://en.wikipedia.org/wiki/List_of_HTTP_status_codes) 
+
+* Check for bad codes with http_error()
+
+As mentioned, HTTP calls can go wrong. Handling that can be done with httr's http_error() function, which identifies whether a server response contains an error.
+
+If the response does contain an error, calling http_error() over the response will produce TRUE; otherwise, FALSE. 
+
+You can use this for really fine-grained control over results. For example, you could check whether the request contained an error, and (if so) issue a warning and re-try the request.
+
+For now we'll try something a bit simpler - issuing a warning that something went wrong if http_error() returns TRUE, and printing the content if it doesn't.
+
+```{r}
+fake_url <- "http://google.com/fakepagethatdoesnotexist"
+
+# Make the GET request
+request_result <- GET(fake_url)
+
+# Check request_result
+if(http_error(request_result)){
+  
+	warning("The request failed")# use warning("") function
+  
+} else {
+  
+	content(request_result)
+}
+```
+
+Since the url mentioned in fake_url doesn't exist, the code threw the warning message we mentioned. Error handling is really important for writing robust code.
+
+## URL construction
+
+* Most of URL doesn't change
+* Stitch URLs together from bits that don't change with the bits that do
+* Saves thinking and typing
+
+__API urls take two forms:__
+
+1. Directory-based URLs
+    + Slash-separated, like directories
+    + https://fakeurl.com/api/peaches/thursday
+    + Very easy to construct. Use paste(), with sep = "/"
+
+2. Parameter-based URLs
+    + Uses URL parameters (a=1&b=2)
+    + https://fakeurl.com/api.php?fruit=peaches&day=thursday
+    + Use GET() to construct the URL with query argument
+
+## Constructing queries (Directory based API urls)
+
+As briefly discussed above, the actual API query (which tells the API what you want to do) tends to be in one of the two forms. 
+
+* The first is directory-based, where values are separated by / marks within the URL. 
+* The second is parameter-based, where all the values exist at the end of the URL and take the form of key=value.
+
+Constructing directory-based URLs can be done via paste(), which takes an unlimited number of strings, along with a separator, as sep. So to construct http://swapi.co/api/vehicles/12 we'd call:
+
+paste("http://swapi.co", "api", "vehicles", "12", sep = "/")
+
+SWAPI is an API chock full of star wars data.
+
+This time, rather than a vehicle, we'll look for a person.
+
+```{r}
+# Construct a directory-based API URL to "http://swapi.co/api",
+# looking for person "1" in "people"
+directory_url <- paste("http://swapi.co/api", "people", 1, sep = "/")
+
+# Make a GET call with it
+result <- GET(directory_url)
+```
+
+Constructing these kinds of queries is very simple, but also extremely important. Now you know how to write automated or semi-automated code for more modern APIs.
+
+## Constructing queries (Parameter based API urls)
+
+Parameter based urls are those where all the query values exist at the end of the URL and take the form of key=value - they look something like http://fakeurl.com/foo.php?country=spain&food=goulash
+
+Constructing parameter-based URLs can also be done with paste(), but the easiest way to do it is with GET() and POST() themselves, which accept a query argument consisting of a list of keys and values. 
+
+So, to continue with the food-based examples, we could construct
+
+fakeurl.com/api.php?fruit=peaches&day=thursday with:
+
+GET("fakeurl.com/api.php", query = list(fruit = "peaches", day = "thursday"))
+
+In this exercise you'll construct a call to https://httpbin.org/get?nationality=americans&country=antigua
+
+```{r}
+# Create list with nationality and country elements
+query_params <- list(nationality = "americans", 
+    country = "antigua")
+    
+# Make parameter-based call to httpbin, with query_params
+parameter_response <- GET("https://httpbin.org/get", query = query_params)
+
+# Print parameter_response
+parameter_response
+```
+
+
+

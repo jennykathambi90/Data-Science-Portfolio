@@ -1,0 +1,99 @@
+---
+title: "Wrap up"
+author: "Jane Kathambi"
+date: "11 July 2018"
+output: 
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+
+# Wrapup: returning nice API output
+How might all this work together? A useful API function will retrieve results from an API and return them in a useful form. 
+
+We have already seen how to write a function that retrieves data from an API that relied on content() to convert it to a useful form. To write a more robust API function you shouldn't rely on content() but instead parse the data yourself.
+
+To finish up this chapter you'll do exactly that: write get_revision_history() which retrieves the XML data for the revision history of page on Wikipedia, parses it, and returns it in a nice data frame.
+
+We will call get_revision() function inside of our new function to return the response that we will parse.
+
+You can assume this function returns the raw response and follows the best practices you learnt in Chapter 2, like using a user agent, and checking the response status.
+
+
+# Load the required libraries
+
+```{r}
+library(xml2)
+```
+
+# Create rev_history() function to obtain raw repsonse
+
+Let us begin by writing a function to get the revision history for the Wikipedia article for "Hadley Wickham".
+
+```{r}
+rev_history <- function(title, format = "json"){
+  
+  if (title != "Hadley Wickham") {
+    stop('rev_history() only works for `title = "Hadley Wickham"`')
+  }
+  
+  if (format == "json"){
+    resp <- readRDS("had_rev_json.rds")
+  } 
+  
+  else if (format == "xml"){
+    resp <- readRDS("had_rev_xml.rds")
+  } 
+  
+  else {
+    stop('Invalid format supplied, try "json" or "xml"')
+  }
+  
+  resp  
+}
+
+```
+
+# Create get_revision_history() function to parse response
+
+We will call the get_revision function to obtain the response then parse it and finally, call get_revision_history() with article_title = "Hadley Wickham".
+
+```{r}
+
+get_revision_history <- function(article_title){
+  # Get raw revision response
+  rev_resp <- rev_history(article_title, format = "xml")
+  
+  # Turn the content() of rev_resp into XML
+  rev_xml <- read_xml(content(rev_resp, "text"))
+  
+  # Find revision nodes
+  rev_nodes <- xml_find_all(rev_xml, "//rev")
+
+  # Parse out usernames
+  user <- xml_attr(rev_nodes, attr='user')
+  
+  # Parse out timestamps
+  timestamp <- readr::parse_datetime(xml_attr(rev_nodes, "timestamp"))
+  
+  # Parse out content
+  content <- xml_text(rev_nodes)
+  
+  # Return data frame 
+  data.frame(user = user,
+    timestamp = timestamp,
+    content = substr(content, 1, 40))
+}
+
+# Call function for "Hadley Wickham"
+get_revision_history("Hadley Wickham")
+
+```
+
+Nice job! Your function parsed the XML data, but you could have just as easily parsed the JSON data.
+

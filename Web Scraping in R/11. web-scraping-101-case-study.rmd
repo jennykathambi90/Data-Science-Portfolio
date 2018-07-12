@@ -1,0 +1,274 @@
+---
+title: "Web scraping 101: Case Study"
+author: "Jane Kathambi"
+date: "11 July 2018"
+output: 
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+
+# Web scraping 101 case study
+What if you dont have a server API and you want to scrape data? You use rvest read_html(url) function to obtain the webpage in xml format. We then later use rvest functions (html_node(), html_text()) to scrape the data.
+
+I case we use an API to read in data we tell it to return the xml format.
+
+Extracting an infobox from a Wikipedia page. We will follow the following steps:
+
+1. Get the XML content of a Wikipedia page through API. Use httr package.
+2. Extract the infobox from the page. Use rvest with css selectors.
+3. Clean it up and turn it into a data frame
+4. Turn it into a function i.e a API
+
+# Load required libraries
+```{r}
+library(httr)
+library(rvest)
+library(xml2)
+```
+
+
+#Get the XML content of a Wikipedia page through API
+We will use the httr package.
+
+__API calls__
+Your first step is to use the Wikipedia API to get the page contents for a specific page. We'll continue to work with the Hadley Wickham page.
+
+To get the content of a page from the Wikipedia API you need to use a parameter based URL. The URL you want is:
+
+https://en.wikipedia.org/w/api.php?action=parse&page=Hadley%20Wickham&format=xml
+
+which specifies that you want the parsed content (i.e the HTML) for the "Hadley Wickham" page, and the API response should be XML.
+
+In this exercise you'll make the request with GET() and parse the XML response with content().
+
+```{r}
+# The API url
+base_url <- "https://en.wikipedia.org/w/api.php"
+
+# Set list for query parameters
+query_params <- list(action ="parse", 
+  page = "Hadley Wickham", 
+  format = "xml")
+
+# Use GET() to call the API to get data
+resp <- GET(url = base_url, query = query_params)
+    
+# Parse response using content
+resp_xml <- content(resp)
+```
+
+# Extracting information: Extract the infobox from the page 
+We will use rvest with css selectors.
+
+Now we have a response from the API, we need to extract the HTML for the page from it. It turns out the HTML is stored in the contents of the XML response.
+Take a look, by using xml_text() to pull out the text from the XML response:
+
+xml_text(resp_xml)
+
+In this exercise, you'll read this text as HTML, then extract the relevant nodes to get the infobox and page title.
+
+Use read_html() to read the contents of the XML response (xml_text(resp_xml)) as HTML.
+
+```{r}
+# Read page contents as HTML
+page_html <- read_html(xml_text(resp_xml))
+```
+
+Use html_node() to extract the infobox element (having the class infobox) from page_html with a CSS selector.
+
+```{r}
+# Extract infobox element
+infobox_element <- html_node(x=page_html, css='.infobox')
+infobox_element
+```
+
+Use html_name() to extract the html tag name of the returned infobox_element.
+This step is optional but i chose it so that i know what method to use to turn the infobox into a data frame and since it is a table i will use html_table() function. If it is not, i would extract variable vectors separately and use data.frame() function.
+```{r}
+# Extract the html tag name
+html_name(infobox_element)
+```
+
+The html tag name is table. 
+
+Use html_node() to extract the page title element (having the class fn) from infobox_element with a CSS selector.
+
+```{r}
+# Extract page title element from infobox
+page_title_element <- html_node(x=infobox_element, css='.fn')
+page_title_element
+```
+
+Extract the title text from page_title_element with html_text()
+
+```{r}
+# Extract page title element as text
+page_title <- html_text(page_title_element)
+page_title
+```
+
+
+
+# Clean it up and turn it into a data frame
+
+## Normalising information
+Now it's time to put together the information in a nice format. You've already seen you can use html_table() to parse the infobox into a data frame. But one piece of important information is missing from that table: who the information is about!
+
+In this exercise, you'll parse the infobox in a data frame, and add a row for the full name of the subject.
+
+Parse the infobox element into a data frame named wiki_dataframe
+
+```{r}
+# Parse the infobox element into a data frame
+wiki_dataframe<-html_table(infobox_element)
+
+```
+
+##Inspecting the data frame
+Use the view function to view it.
+
+You notice that the column names are not correct, and there are two empty rows
+
+```{r}
+#view the wiki_dataframe
+View(wiki_dataframe)
+```
+
+##Cleaning up the data frame
+1. Change column names to reasonable names
+2. Remove the empty row
+
+```{r}
+# assign the data frame new column names
+names(wiki_dataframe)=c("key", "value")
+
+# verify that the column names have been changed
+names(wiki_dataframe)
+
+# remove empty rows
+wiki_dataframe_clean=wiki_dataframe%>%
+  subset(key!="")
+
+# verify empty rows have beeen removed
+View(wiki_dataframe_clean)
+```
+
+## add a row for the full name of the subject
+
+Create a new data frame where key is the string "Full name" and value is our previously stored page_title
+
+```{r}
+# Create a dataframe for full name
+name_df <- data.frame(key = "Full name", value = page_title)
+```
+
+Combine name_df with wiki_dataframe_clean using rbind() and assign it to wiki_table2.
+
+```{r}
+# Combine name_df with wiki_dataframe_clean using rbind() function
+wiki_table2 <- rbind(name_df, wiki_dataframe_clean)
+
+# Print wiki_table2
+wiki_table2
+```
+
+
+# Reproducibility: Turn it into a function i.e a API
+We will combine everything into a function or an API for reproducibility.
+
+Now you've figured out the process for requesting and parsing the infobox for the Hadley Wickham page, it's time to turn it into a function that does the same thing for anyone.
+
+We will wrap everythig you have done into a function/API named get_infobox().
+
+Then we will test out our API.
+
+```{r}
+# load httr
+# load rvest
+# load xml2
+
+get_infobox <- function(title){
+  
+  # The API url
+  base_url <- "https://en.wikipedia.org/w/api.php"
+  
+  # Set list for query parameters
+  query_params <- list(action = "parse", 
+    page = title, 
+    format = "xml")
+  
+  # Use GET() to call the API to get data
+  resp <- GET(url = base_url, query = query_params)
+  
+  # Parse response using content
+  resp_xml <- content(resp)
+  
+  # Read page contents as HTML
+  page_html <- read_html(xml_text(resp_xml))
+  
+  # Extract infobox element using css class infobox
+  infobox_element <- html_node(x = page_html, css =".infobox")
+  
+  # Extract page title element from infobox
+  page_title_element <- html_node(x = infobox_element, css = ".fn")
+  
+  # Extract page title element as text
+  page_title <- html_text(page_title_element)
+  
+  # Parse the infobox element into a data frame
+  wiki_dataframe<-html_table(infobox_element)
+  
+  # assign the data frame new column names
+  colnames(wiki_dataframe) <- c("key", "value")
+  
+  # remove empty rows
+  wiki_dataframe_clean=wiki_dataframe%>%subset(key!="")
+  
+  # Create a dataframe for full name
+  name_df <- data.frame(key = "Full name", value = page_title)
+
+  # Combine name_df with wiki_dataframe_clean using rbind() function
+  wiki_table2 <- rbind(name_df, wiki_dataframe_clean)
+
+  # Print wiki_table2 or return wiki_table2
+  wiki_table2
+}
+
+```
+
+Then we will test out our API.
+
+```{r}
+# Test get_infobox with "Hadley Wickham"
+Hadley_Wickham=get_infobox(title = "Hadley Wickham")
+Hadley_Wickham
+
+# Try get_infobox with "Ross Ihaka"
+Ross_Ihaka=get_infobox(title = "Ross Ihaka")
+Ross_Ihaka
+
+# Try get_infobox with "Grace Hopper"
+Grace_Hopper=get_infobox(title = "Grace Hopper")
+Grace_Hopper
+```
+
+
+Wow, great work! You put together everything you've learn to make a useful API function. The function isn't perfect: you may notice it fails rather ungracefully if you ask for a page that doesn't exist, or a person without an infobox.
+
+
+
+
+
+
+
+
+
+
+
+

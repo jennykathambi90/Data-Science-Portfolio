@@ -1,0 +1,225 @@
+---
+title: "Handling JSON"
+author: "Jane Kathambi"
+date: "11 July 2018"
+output: 
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+
+# Overview
+
+Sometimes data is a TSV or nice plaintext output. Sometimes it's XML and/or JSON. 
+
+This chapter walks you through what JSON is, how to convert json into R-like objects, and how to extract data from them. 
+
+You'll practice by examining the revision history for a Wikipedia article retrieved from the Wikipedia API using httr and jsonlite.
+
+An API returns various data formats but the two most common data formats are:
+1. xml
+2. json
+
+Lets check out json.
+
+# JSON (JavaScript Object Notation)
+
+Json is a common format for storing and transmitting data on the web.
+
+http://www.json.org/
+
+* Plain text format
+* Two structures:
+    + objects: {"title" : "A New Hope", "year" : "1977"}
+    + arrays: [1977, 1980]
+* Values: "string", 3, true, false, null, or another object or array
+
+An example JSON data set. It is an array with two elements each an object.
+[ 
+  {
+    "title" : "A New Hope",
+    "year" : 1977
+  },
+  {
+    "title" : "The Empire Strikes Back",
+    "year" : 1980
+  }
+]
+
+# Indentifying a JSON response
+Two ways:
+1. Read the API documentation
+2. Use the function http_type(response)
+
+library(httr)
+url <- "http://httpbin.org/get"
+response <- GET(url)
+http_type(response)
+[1] "application/json"
+
+# Lets examine the contents of the response as plain text
+
+writeLines(content(response, as = "text"))
+
+No encoding supplied: defaulting to UTF-8.
+{
+  "args": {}, 
+  "headers": {
+    "Accept": "application/json, text/xml, application/xml, */*", 
+    "Accept-Encoding": "gzip, deflate", 
+    "Connection": "close", 
+    "Host": "httpbin.org", 
+    "User-Agent": "libcurl/7.54.0 r-curl/2.8.1 httr/1.2.1"
+  }, 
+  "origin": "98.232.182.170", 
+  "url": "http://httpbin.org/get"
+}
+
+
+# Load the required libraries
+
+```{r}
+library(jsonlite)
+library(rlist)# for manipulating parsed json
+library(dplyr)# another way for manipulating parsed json
+```
+
+# Parsing JSON
+
+While JSON is a useful format for sharing data, your first step will often be to parse it into an R object, so you can manipulate it with R.
+
+The content() function in httr retrieves the content from a request. It takes an as argument that specifies the type of output to return. You've already seen that as = "text" will return the content as a character string which is useful for checking the content is as you expect.
+
+If you don't specify as, the default as = "parsed" is used. In this case the type of content() will be guessed based on the header and content() will choose an appropriate parsing function. For JSON this function is fromJSON() from the jsonlite package. If you know your response is JSON, you may want to use fromJSON() directly.
+
+To practice, you'll retrieve some revision history from the Wikipedia API, check it is JSON, then parse it into a list two ways.
+
+Let us begin by writing a function to get the revision history for the Wikipedia article for "Hadley Wickham".
+
+```{r}
+rev_history <- function(title, format = "json"){
+  
+  if (title != "Hadley Wickham") {
+    stop('rev_history() only works for `title = "Hadley Wickham"`')
+  }
+  
+  if (format == "json"){
+    resp <- readRDS("had_rev_json.rds")
+  } 
+  
+  else if (format == "xml"){
+    resp <- readRDS("had_rev_xml.rds")
+  } 
+  
+  else {
+    stop('Invalid format supplied, try "json" or "xml"')
+  }
+  
+  resp  
+}
+
+```
+
+
+Let us use our function to obtain the revision history for "Hadley Wickham"
+
+```{r}
+# Get revision history for "Hadley Wickham"
+resp_json <- rev_history("Hadley Wickham")
+
+# Check http_type() of resp_json
+http_type(resp_json)
+
+# Examine returned text with content()
+content(resp_json, as="text")
+
+# Parse response with content()
+content(resp_json, as = "parsed")
+
+# Parse returned text with fromJSON()
+# load jsonlite. 
+
+fromJSON(content(resp_json, as="text"))
+
+```
+
+You may have noticed the output from content() is pretty long and hard to understand. Don't worry, that is just the nature of nested data, you'll learn a couple of tricks for dealing with it next. However, it will be helpful to know that this response contains 5 revisions.
+
+# Manipulating parsed JSON
+
+Normally the output from parsing JSON is a list. There are various ways of manipulate the resulting parsed list:
+1. Rlist package
+2. Tidyverse specifically dplyr
+3. Fuctions from base R
+
+## Rlist package
+One way to extract relevant data from that list is to use a package specifically designed for manipulating lists, rlist.
+
+rlist provides two particularly useful functions for selecting and combining elements from a list: list.select() and list.stack(). 
+
+list.select() extracts sub-elements by name from each element in a list. 
+
+The result of list.select() is still a list, that is where list.stack() comes in. It will stack the elements of a list into a data frame.
+
+Therefore:
+list.stack(
+  list.select()
+)
+
+In this exercise you'll use these rlist functions to create a data frame with the user and timestamp for each revision.
+
+rlist is designed to make working with lists easy, so if find you are working with JSON data a lot, you should explore more of its functionality.
+
+First, you'll need to figure out where the revisions are. Examine the output from the str() call. Can you see where the list of 5 revisions is?
+
+```{r}
+# Examine output of this code
+str(content(resp_json), max.level = 4)
+```
+
+Store the revisions in revs.
+```{r}
+# Store revision list
+revs <- content(resp_json)$query$pages$`41916270`$revisions
+```
+
+View the structure of revs to identify what variables/elements it contains
+
+```{r}
+#view the str of revs 
+str(revs)
+```
+
+
+Use list.select() to pull out the user and timestamp elements from each revision, store in user_time.
+
+```{r}
+# Extract the user element
+user_time <- list.select(revs, user,timestamp )
+```
+
+Print user_time to verify it's a list with one element for each revision.
+```{r}
+# Print user_time
+user_time
+```
+
+
+Use list.stack() to stack the lists into a data frame.
+
+```{r}
+# Stack to turn into a data frame
+list.stack(user_time)
+```
+
+
+
+
+
+
+
