@@ -1,0 +1,156 @@
+---
+title: "Classification Mixture  Discriminant Analysis. Diabetes Data"
+author: "Jane Kathambi"
+date: "8 June 2018"
+output: 
+  html_document:
+    keep_md: yes
+    number_sections: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+# Introduction
+A classification problem involves predicting a non-numerical value—that is, a categorical variable, also known as discrete variable.
+
+Most of the classification algorithms computes the probability of belonging to a given class. Observations are then assigned to the class that have the highest probability score.
+
+Generally, you need to decide a probability cutoff above which you consider the an observation as belonging to a given class.
+
+## Recap
+** separable data:** 
+* LDA: Small training set. Also Linear kernel svms.
+* QDA: Large training set. Also Linear kernel svms.
+* RDA: Large training set and too many features. Also Linear kernel svms.
+
+**inseparable data:**
+* FDA: Multivariate inseparable data sets. Also radial kernel svms.
+* MDA: Classes have sub-classes which are distributed. Also radial kernel svms.
+
+# The PimaIndiansDiabetes2 Data
+PimaIndiansDiabetes2 is contained in the mlbench package. We will use it for predicting the probability of being diabetes positive or negative based on multiple clinical variables. This is a binary classification problem.
+
+This data set has two inseparable classes, as we will see shortly, and so an mda can model this data well.
+
+The data contains 768 individuals (female) and 9 clinical variables for predicting the probability of individuals in being diabete-positive or negative:
+
+* pregnant: number of times pregnant
+* glucose: plasma glucose concentration
+* pressure: diastolic blood pressure (mm Hg)
+* triceps: triceps skin fold thickness (mm)
+* insulin: 2-Hour serum insulin (mu U/ml)
+* mass: body mass index (weight in kg/(height in m)^2)
+* pedigree: diabetes pedigree function
+* age: age (years)
+* diabetes: class variable
+
+# Classification:  MDA (Mixture discriminant analysis)
+The LDA classifier assumes that each class comes from a single normal (or Gaussian) distribution. This is too restrictive.
+
+For MDA, there are classes, and each class is assumed to be a Gaussian mixture of subclasses, where each data point has a probability of belonging to each class. Equality of covariance matrix, among classes, is still assumed.
+
+# Load the required libraries.
+* tidyverse. for easy data manipulation and visualization
+* caret. for easy machine learning workflow. createDataPartition for partitioning the data into test set and train set.
+* mda library: has the mda function.
+
+
+```{r}
+library(tidyverse)
+library(caret)
+library(mda)
+```
+
+# Exploring the PimaIndiansDiabetes2 Data
+
+```{r}
+# Load the data
+data("PimaIndiansDiabetes2", package = "mlbench")
+
+# remove Nas
+PimaIndiansDiabetes2 <- na.omit(PimaIndiansDiabetes2)
+
+# Inspect the data
+sample_n(PimaIndiansDiabetes2, 3)
+
+# Covariance scatterplot Matrix. View how each variable varies with the rest as well as how the classes are distributed.
+pairs(PimaIndiansDiabetes2, col=PimaIndiansDiabetes2$diabetes)
+
+# plot two variables to see how many classes there are and if they are separable.
+PimaIndiansDiabetes3=PimaIndiansDiabetes2[,c('glucose','pressure')]
+pairs(PimaIndiansDiabetes3, col=PimaIndiansDiabetes2$diabetes)
+
+# dim
+dim(PimaIndiansDiabetes2)
+```
+
+From the pairs plot above we see that there are two classes which are inseparable. So mda can model this data. Although mda works best when there are sub classes. fda, Radial kernel svm and ridge penalised logistic regression would work better.
+
+## Normalize the data. Categorical variables are automatically ignored.
+```{r}
+# Estimate preprocessing parameters
+preproc.param <- PimaIndiansDiabetes2 %>% 
+  preProcess(method = c("center", "scale"))
+
+# Transform the data using the estimated parameters
+PimaIndiansDiabetes2_normalized <- preproc.param %>% predict(PimaIndiansDiabetes2)
+
+```
+
+
+## Split the data into training and test set
+We'll randomly split the data into training set (80% for building a predictive model) and test set (20% for evaluating the model). Make sure to set seed for reproductibility.
+```{r}
+set.seed(123)
+training.samples <- PimaIndiansDiabetes2_normalized$diabetes %>% 
+  createDataPartition(p = 0.8, list = FALSE)
+
+train.data  <- PimaIndiansDiabetes2_normalized[training.samples, ]
+test.data <- PimaIndiansDiabetes2_normalized[-training.samples, ]
+
+```
+
+
+# Fit the MDA model
+```{r}
+# Fit the MDA model
+mda_model <- mda(diabetes~., data = train.data)
+mda_model
+```
+
+# Plot the model on classification of train.data (predictions on train data)
+```{r}
+# plot the model
+plot(mda_model, train.data)
+```
+
+# Plot the model on classification of test.data (predictions on new data)
+```{r}
+# plot the model
+plot(mda_model, test.data)
+```
+
+# MDA Model accuracy
+For mda model the output of predictions is predicted classes. So we access model accuracy as follows:
+mean(preds == test.data$Species)
+```{r}
+# Make predictions
+preds <- mda_model %>% predict(test.data)
+# Model accuracy
+mean(preds == test.data$diabetes)
+
+
+```
+
+Our model has an accuracy of 0.7692. This implies that the model is doing fairly well. Although the best model on this data is fda model. Mda is not the best model for this data set.
+
+# Model Accuracies Ranking
+The following is a ranking of how the models perfomed on classifying this diabetes data strating from the best model. The best model for this data is FDA.
+
+1. Flexible Discriminant Analysis: 0.807 accuracy
+2. Radial Kernel SVM classifier: 0.794 accuracy
+3. Ridge Penalised Logistic Regression: 0.782 accuracy
+4. Mixture Discriminant Analysis: 0.769 accuracy

@@ -1,0 +1,323 @@
+---
+title: "Regression: Multiple Linear Regression"
+author: "Jane Kathambi"
+date: "17 July 2018"
+output: 
+  html_document:
+    keep_md: yes
+    number_sections: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+# Introduction
+In this study we  will explore multiple linear regression. Multiple linear regression involves more than one predicor. We will use the marketing data set for  predicting sales units on the basis of the amount of money spent in three advertising media (youtube, facebook, newspaper).
+
+A regression problem is one that requires us to predict a continuous outcome variable (y) based on the value of one or multiple predictor variables (x).
+
+The goal of regression model is to build a mathematical equation that defines y as a function of the x variables. Next, this equation can be used to predict the outcome (y) on the basis of new values of the predictor variables (x).
+
+Linear regression is the most simple and popular technique for predicting a continuous variable. It assumes a linear relationship between the outcome and the predictor variables.
+
+Multiple linear regression equation can be written as  y = b0 + b1*x1 + b2*x2, where:
+
+* b0 is the intercept,
+* b1 is the regression weight or coefficient associated with the predictor variable x1.
+* b2 is the regression weight or coefficient associated with the predictor variable x2.
+
+Technically, the linear regression coefficients are detetermined so that the error in predicting the outcome value is minimized. This method of computing the beta coefficients is called the Ordinary Least Squares method.
+
+In some situations, there might be an **interaction effect** between some predictors, that is for example, increasing the value of a predictor variable x1 may increase the effectiveness of the predictor x2 in explaining the variation in the outcome variable.
+
+Note also that, linear regression models can incorporate both continuous and categorical predictor variables.
+
+Before building the linear regression model, you need to diagnostic whether linear model is suitable for your data. 
+
+## simple workflow to build a predictive regression model
+A simple workflow to build a predictive regression model is as follow:
+
+1. Diagnose whether linear model is suitable for your data i.e there is a linear relationship between the predictor(s) and the response.
+    + This can be easily checked by creating a scatter plot of the outcome variable vs the predictor variable.
+2. Randomly split your data into training set (80%) and test set (20%)
+3. Build the regression model using the training set
+4. Make predictions using the test set and compute the model accuracy metrics
+
+# Marketing Data
+The marketing data set [datarium package] contains the impact of three advertising medias (youtube, facebook and newspaper) on sales. It will be used for predicting sales units on the basis of the amount of money spent in the three advertising medias.
+
+Data are the advertising budget in thousands of dollars along with the sales. The advertising experiment has been repeated 200 times with different budgets and the observed sales have been recorded.
+
+The marketing data has the following variabes:
+
+* youtube
+* facebook
+* newspaper
+* sales
+
+First install the datarium package:
+
+if(!require(devtools)) install.packages("devtools")
+devtools::install_github("kassambara/datarium")
+
+Then, load marketing data set as follows:
+
+data("marketing", package = "datarium")
+
+# Load the required libraries
+* tidyverse for easy data manipulation and visualization
+* caret for easy machine learning workflow
+
+```{r}
+library(tidyverse)
+library(caret)
+theme_set(theme_bw())
+```
+
+# Load and inspect the data
+```{r}
+# Load the data
+data("marketing", package = "datarium")
+# Inspect the data
+sample_n(marketing, 3)
+```
+
+# Diagnose whether linear model is suitable
+Scatterplot of sales units versus budget spent in the three advertising media (youtube, facebook, newspaper).
+We will add a smoothed line.
+
+```{r}
+# modigy the data to enable facet wrap with media
+marketing_new<-marketing%>%
+  gather(media, budget, -sales)
+
+# plot the scatter plot based on the three media
+p<-ggplot(marketing_new, aes(x = budget, y = sales)) +
+  geom_point() +
+  stat_smooth()+
+  facet_wrap(~media)
+
+# Display the scatter plot.
+p
+```
+
+The graph above shows a: 
+1. Linearly increasing relationship between the sales and the youtube variables, which is a good thing.
+2. Linearly increasing relationship between the sales and the facebook variables, which is a good thing.
+3. Non-linearly increasing relationship between the sales and the newspaper variables.
+
+So essenntially we should only fit a linear model to predict sales based on youtube and facebook variables only.
+
+However we will include all the predictors for now in order to understand signinifcant variables selection.
+
+
+
+# Preparing the data
+
+## Split the data into training set and test set
+We'll randomly split the data into training set (80% for building a predictive model) and test set (20% for evaluating the model). Make sure to set seed for reproducibility.
+```{r}
+# Split the data into training and test set
+set.seed(123)
+training.samples <- marketing$sales %>%
+  createDataPartition(p = 0.8, list = FALSE)
+
+train.data  <- marketing[training.samples, ]
+test.data <- marketing[-training.samples, ]
+```
+
+
+# Fit a Multiple linear regression
+The multiple linear regression is used to predict a continuous outcome variable (y) based on more than one predictor variable (x).
+
+We'll build a multiple linear model to predict sales units based on the advertising budget spent on youtube, facebook and newspaper.
+
+We'll use the R function lm().
+
+You can use y~. to include all the x predictors.
+
+We will use 10-fold cross validation to select optimal coefficient parameters.
+```{r}
+# Define train control for k fold cross validation
+train_control <- trainControl(method="cv", number=10)
+
+# Fit Multiple Linear Model
+model <- train(sales~., data=train.data, trControl=train_control, method="lm")
+
+```
+
+# Coefficients significance
+To see which predictor variables are significant, you can examine the coefficients table, which shows the estimate of regression beta coefficients and the associated t-statistic p-values.
+
+
+```{r}
+summary(model)$coef
+```
+
+For a given the predictor, the t-statistic evaluates whether or not there is significant association between the predictor and the outcome variable, that is whether the beta coefficient of the predictor is significantly different from zero.
+
+It can be seen that, changes in youtube and facebook advertising budget are significantly associated to changes in sales while changes in newspaper budget is not significantly associated with sales.
+
+Which is more significant, facebook or youtube? Let us look at the coefficients.
+Facebook has a higher coefficint hence it is more significant than youtube. Let us further proove this.
+
+For a given predictor variable, the coefficient (b) can be interpreted as the average effect on y of a one unit increase in predictor, holding all other predictors fixed. Let us see this in action:
+
+* for a fixed amount of youtube and newspaper advertising budget, spending an additional 1 000 dollars on *facebook* advertising leads to an increase in sales by approximately 0.1869*1000 = 187 sale units, on average.
+
+* for a fixed amount of facebook and newspaper advertising budget, spending an additional 1 000 dollars on *youtube* advertising leads to an increase in sales by approximately 0.0455*1000 = 46 sales units, on average.
+
+* for a fixed amount of facebook and youtube advertising budget, spending an additional 1 000 dollars on *newspaper* advertising leads to an increase in sales by approximately 0.0017*1000 = 2 sales units, on average.
+
+
+We found that newspaper is not significant in the multiple regression model. This means that, for a fixed amount of youtube and newspaper advertising budget, changes in the newspaper advertising budget will not significantly affect sales units.
+
+As the newspaper variable is not significant, we will remove it from the model.
+
+We also saw this when we first plotted the scatterplots of the three advertising media.
+
+We will use 10-fold cross validation to select optimal coefficient parameters.
+## New model minus newspaper
+```{r}
+# Define train control for k fold cross validation
+train_control <- trainControl(method="cv", number=10)
+
+# Fit Multiple Linear Model
+model <- train(sales~ youtube + facebook, data=train.data, trControl=train_control, method="lm")
+
+summary(model)
+```
+
+Finally, our model equation can be written as follow: sales = 3.43+ 0.045youtube + 0.187facebook.
+
+# Model Accuracy
+Before using a model for predictions, you need to assess the statistical significance of the model. The overall quality of the linear regression fit can be assessed using the following four quantities, three of which are displayed in the model summary and the last one has to be computed on test data:
+
+* Residual Standard Error (RSE),
+* R-squared (R2) and adjusted R2,
+* F-statistic, which has been already described in the previous section
+* Test data prediction error. (RMSE)
+
+*Model summary*
+The summary outputs shows 6 components, including:
+
+* Call. Shows the function call used to compute the regression model.
+
+* Residuals. Provide a quick view of the distribution of the residuals, which by definition have a mean zero. Therefore, the median should not be far from zero, and the minimum and maximum should be roughly equal in absolute value.
+
+* Coefficients. Shows the regression beta coefficients and their statistical significance. Predictor variables, that are significantly associated to the outcome variable, are marked by stars:
+    + Estimate: the intercept (b0) and the beta coefficient estimates associated to each predictor variable. The larger the better.
+    
+    + Std.Error: the standard error of the coefficient estimates. This represents the accuracy of the coefficients. The larger the standard error, the less confident we are about the estimate. The smaller the better.
+    
+    + t value: the t-statistic, which is the coefficient estimate (column 2) divided by the standard error of the estimate (column 3). The larger the better.
+    
+    + Pr(>|t|): The p-value corresponding to the t-statistic. The smaller the p-value, the more significant the estimate is. The smaller the better.
+
+
+* Residual standard error (RSE), 
+* R-squared (R2), 
+* F-statistic. The higher the F-statistic the better abd the lower the p-value of the F-statistic the better.
+
+Residual standard error (RSE), R-squared (R2) and the F-statistic are metrics that are used to check how well the model fits to our data.
+
+Let us run a summary of the model in order to access the model accuracy.
+```{r}
+summary(model)
+```
+
+## F-statistic and the associated p-value at the bottom of model summary
+The first step in interpreting the multiple regression analysis is to examine the F-statistic and the associated p-value, at the bottom of model summary.
+
+F-statistic gives the overall significance of the model. It assess whether at least one predictor variable has a non-zero coefficient.
+
+In a simple linear regression, this test is not really interesting since it just duplicates the information given by the t-test, available in the coefficient table.
+
+The F-statistic becomes more important once we start using multiple predictors as in multiple linear regression.
+
+A large F-statistic will corresponds to a statistically significant p-value (p < 0.05). In our example, the F-statistic equal 644 producing a p-value of 1.46e-42, which is highly significant.
+
+This means that, at least, one of the predictor variables is significantly related to the response variable.
+
+So we can continue with assessing the model further since at least, one predictor variable is significantly associated to the outcome.
+
+This assessment helps us to determine how well the model fits the data. This process is also referred to as the goodness-of-fit
+
+## Residual standard error (RSE).
+The smaller the better. 
+
+The RSE (or model sigma), corresponding to the prediction error, represents roughly the average difference between the observed outcome values and the predicted values by the model. The lower the RSE the best the model fits to our data.
+
+Dividing the RSE by the average value of the outcome variable will give you the prediction error rate, which should be as small as possible.
+
+In our example, using only youtube and facebook predictor variables, the RSE = 2.11, meaning that the observed sales values deviate from the predicted values by approximately 2.11 units in average.
+
+This corresponds to an error rate of 2.11/mean(train.data$sales) = 2.11/16.77 = 13%, which is low.
+
+## R-squared and Adjusted R-squared:
+The higher the better.
+
+The R-squared (R2) ranges from 0 to 1 and represents the proportion of variation in the outcome variable that can be explained by the model predictor variables.
+
+For a simple linear regression, R2 is the square of the Pearson correlation coefficient between the outcome and the predictor variables. In multiple linear regression, the R2 represents the correlation coefficient between the observed outcome values and the predicted values.
+
+The R2 measures, how well the model fits the data. The higher the R2, the better the model. However, a problem with the R2, is that, it will always increase when more variables are added to the model, even if those variables are only weakly associated with the outcome (James et al. 2014). A solution is to adjust the R2 by taking into account the number of predictor variables.
+
+The adjustment in the "Adjusted R Square" value in the summary output is a correction for the number of x variables included in the predictive model.
+
+So, you should mainly consider the adjusted R-squared, which is a penalized R2 for a higher number of predictors.
+
+An (adjusted) R2 that is close to 1 indicates that a large proportion of the variability in the outcome has been explained by the regression model.
+A number near 0 indicates that the regression model did not explain much of the variability in the outcome.
+
+In our example, the adjusted R2 is 0.88, which is good.
+
+## Test Data Prediction error
+The ultmate metric to use for testing model accuracy is by obtaining the prediction errors i.e RMSE on test data or new data.
+
+The lower the prediction errors i.e RMSE on the new data the better the model.
+
+We'll make predictions using the test data in order to evaluate the performance of our regression model.
+
+The procedure is as follow:
+1. Predict the sales values based on new advertising budgets in the test data
+2. Assess the model performance by computing:
+    + The prediction error RMSE (Root Mean Squared Error), representing the average difference between the observed known outcome values in the test data and the predicted outcome values by the model. The lower the RMSE, the better the model.
+    + The R-square (R2), representing the correlation between the observed outcome values and the predicted outcome values. The higher the R2, the better the model.
+    
+```{r}
+# Make predictions
+predictions <- model %>% predict(test.data)
+
+# Model performance
+# (a) Compute the prediction error, RMSE
+RMSE(predictions, test.data$sales)
+
+# (b) Compute R-square
+R2(predictions, test.data$sales)
+```
+
+From the output above, the prediction error RMSE is 1.58, representing an error rate of 1.58/mean(test.data$sales) = 1.58/17 = 9.2%, which is good.
+
+the R2 is 0.94, meaning that the observed and the predicted outcome values are highly correlated, which is very good.
+
+# Discussion
+We have seen how to compute multiple linear regression models as well as how to assess the performance of the model for predictions.
+
+Note that, linear regression assumes a linear relationship between the outcome and the predictor variables. This can be easily checked by creating a scatter plot of the outcome variable vs the predictor variable.
+
+Only include variables which are linearly correlated with the response variable if you are fitting a linear regression  model.
+
+In addition to the linearity assumptions, the linear regression method makes many other assumptions about your data. You should make sure that these assumptions hold true for your data.
+
+Potential problems, include:
+* the presence of influential observations in the data i.e outliers.
+    + Remove outliers before modelling your data.
+    
+* non-linearity between the outcome and some predictor variables.
+    + use polynomial regression and smoothing splines in this case instead of linear regression.
+    
+* The presence of strong correlation between predictor variables.   
+    + Select the best features before fitting the final model.

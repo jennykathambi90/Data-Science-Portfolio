@@ -1,0 +1,162 @@
+---
+title: "Regression: Non-Linear Regression: Polynomial Regression"
+author: "Jane Kathambi"
+date: "17 July 2018"
+output: 
+  html_document:
+    keep_md: yes
+    number_sections: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+# Introduction
+In some cases, the true relationship between the outcome and a predictor variable might not be linear.
+
+There are different solutions extending the linear regression model for capturing these nonlinear effects, including:
+
+* Polynomial regression. This is the simple approach to model non-linear relationships. It add polynomial terms or quadratic terms (square, cubes, etc) to a regression.
+
+* Spline regression. Fits a smooth curve with a series of polynomial segments. The values delimiting the spline segments are called Knots. Smoothing splines are better than natural splines. Cross-validated Smoothing splines automatically select the smoothness level by crossvalidation;this results in a value of ?? that yields optimal degrees of freedom.
+
+* Generalized additive models (GAM). Fits spline models with automated selection of knots.
+
+* Log transformation. When you have a non-linear relationship, you can also try a logarithm transformation of the predictor variables.
+
+In this study, we'll learn how to compute non-linear regression models and how to compare the different models in order to choose the one that fits the best your data.
+
+The RMSE and the R2 metrics, will be used to compare the different models.
+
+Recall that, the RMSE represents the model prediction error, that is the average difference the observed outcome values and the predicted outcome values. The R2 represents the squared correlation between the observed and predicted outcome values. The best model is the model with the lowest RMSE and the highest R2.
+
+## simple workflow to build a predictive regression model
+
+A simple workflow to build a predictive regression model is as follow:
+
+1. Diagnose whether non-linear model is suitable for your data i.e there is a non-linear relationship between the predictor(s) and the response.
+    + This can be easily checked by creating a scatter plot of the outcome variable vs the predictor variable.
+2. Randomly split your data into training set (80%) and test set (20%)
+3. Build the regression model using the training set
+4. Make predictions using the test set and compute the model accuracy metrics
+
+# Polynomial regression
+The polynomial regression adds polynomial or quadratic terms to the regression equation as follow:
+
+medv=b0 + b1???lstat + b2???lstat^2
+
+In R, to create a predictor x^2 you should use the function I(), as follow: 
+
+* I(x^2). This raise x to the power 2.
+
+The polynomial regression can be computed in R as follow:
+
+* lm(medv ~ lstat + I(lstat^2), data = train.data)
+
+An alternative simple solution is to use this:
+
+* lm(medv ~ poly(lstat, 2, raw = TRUE), data = train.data)
+
+# The Boston data set
+We will use the Boston data set [in MASS package] for predicting the median house value (mdev), in Boston Suburbs, based on the predictor variable lstat (percentage of lower status of the population). The variables include:
+
+* crim, per capita crime rate by town
+* zn, proportion of residential land zoned for lots over 25,000 sq.ft
+* indus, proportion of non-retail business acres per town
+* chas, Charles River dummy variable (= 1 if tract bounds river; 0 otherwise)
+* nox, nitric oxides concentration (parts per 10 million)
+* rm, average number of rooms per dwelling
+* age, proportion of owner-occupied units built prior to 1940
+* dis, weighted distances to five Boston employment centres
+* rad, index of accessibility to radial highways
+* tax, full-value property-tax rate per USD 10,000
+* ptratio, pupil-teacher ratio by town
+* black, 1000(B - 0.63)^2 where B is the proportion of blacks by town
+* lstat, percentage of lower status of the population
+* medv, median value of owner-occupied homes in USD 1000's
+
+# Loading Required R packages
+* tidyverse for easy data manipulation and visualization
+* caret for easy machine learning workflow
+```{r}
+library(tidyverse)
+library(caret)
+theme_set(theme_classic())
+```
+
+# Diagnose whether a non-linear model is suitable
+Scatterplot of medv units versus lstat. We will add a smoothed line.
+
+```{r}
+ggplot(Boston, aes(x = lstat, y = medv)) +
+  geom_point() +
+  stat_smooth()
+```
+
+The graph above shows a non-linearly decreasing relationship between medv and lstat variables, which is a good thing. So a non-linear model is ideal.
+
+# Load and Prepare the data
+We'll randomly split the data into training set (80% for building a predictive model) and test set (20% for evaluating the model). Make sure to set seed for reproducibility.
+
+```{r}
+# Load the data
+data("Boston", package = "MASS")
+
+# Split the data into training and test set
+set.seed(123)
+training.samples <- Boston$medv %>%
+  createDataPartition(p = 0.8, list = FALSE)
+
+train.data  <- Boston[training.samples, ]
+test.data <- Boston[-training.samples, ]
+```
+
+# Fit a regression spline model
+
+Let us fit a 6 order polynomial regression.
+
+```{r}
+# fit polynomial regression model
+model=lm(medv ~ poly(lstat, 6, raw = TRUE), data = train.data)
+
+# Summary of the model
+summary(model)
+```
+
+From the output above, it can be seen that polynomial terms beyond the fith order are not significant. So, just create a order fith polynomial regression model as follow:
+```{r}
+# Build the model
+model <- lm(medv ~ poly(lstat, 5, raw = TRUE), data = train.data)
+```
+
+Visualize the polynomial model as follows:
+
+```{r}
+ggplot(train.data, aes(lstat, medv) ) +
+  geom_point() +
+  stat_smooth(method = lm, formula = y ~ poly(x, 5, raw = TRUE))
+```
+
+# Model Accuracy
+```{r}
+# Make predictions
+predictions <- model %>% predict(test.data)
+
+# Model performance
+data.frame(
+  RMSE = RMSE(predictions, test.data$medv),
+  R2 = R2(predictions, test.data$medv)
+)
+```
+
+# Comparing the models
+From analyzing the RMSE and the R2 metrics of the different models, it can be seen that the polynomial regression, the spline regression and the generalized additive models outperform the linear regression model and the log transformation approaches.
+
+A listing of the models on the Boston data set starting with the best model.
+
+* Polynomial Regression Model: RMSE= 4.96127, R2= 0.6887199
+* Smoothing Splines Model: RMSE= 4.970949, R2= 0.6881139
+* Generalized Additive Model: RMSE= 5.01729, R2= 0.6838236
+* log transformation Regression Model: RMSE= 5.243127, R2= 0.6565156

@@ -1,0 +1,139 @@
+---
+title: "Classification Mixture Discriminant Analysis. Iris Data"
+author: "Jane Kathambi"
+date: "8 June 2018"
+output: 
+  html_document:
+    keep_md: yes
+    number_sections: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+# Introduction
+A classification problem involves predicting a non-numerical value—that is, a categorical variable, also known as discrete variable.
+
+Most of the classification algorithms computes the probability of belonging to a given class. Observations are then assigned to the class that have the highest probability score.
+
+Generally, you need to decide a probability cutoff above which you consider the an observation as belonging to a given class.
+
+## Recap
+** separable data:** 
+* LDA: Small training set. Also Linear kernel svms.
+* QDA: Large training set. Also Linear kernel svms.
+* RDA: Large training set and too many features. Also Linear kernel svms.
+
+**inseparable data:**
+* FDA: Multivariate inseparable data sets. Also radial kernel svms.
+* MDA: Classes have sub-classes which are distributed. Also radial kernel svms.
+
+#The Iris data set
+The iris data set will be used for multiclass classification tasks. It contains the length and width of sepals and petals for three iris species. We want to predict the species based on the sepal and petal parameters.
+
+This data has three classes of which two are inseparable classes as we will see shortly. So mda will model this data well. Radial kernel svm and FDA will model this data well too.
+
+# Classification:  MDA (Mixture discriminant analysis)
+The LDA classifier assumes that each class comes from a single normal (or Gaussian) distribution. This is too restrictive.
+
+For MDA, there are classes, and each class is assumed to be a Gaussian mixture of subclasses, where each data point has a probability of belonging to each class. Equality of covariance matrix, among classes, is still assumed.
+
+# Load the required libraries.
+* tidyverse. for easy data manipulation and visualization
+* caret. for easy machine learning workflow. createDataPartition for partitioning the data into test set and train set.
+* mda library: has the mda function.
+
+```{r}
+library(tidyverse)
+library(caret)
+library(mda)
+```
+
+# Exploring the Iris Data
+
+```{r}
+# Load the data
+data("iris")
+
+# check for Nas
+anyNA(iris)
+
+# Inspect the data
+sample_n(iris, 3)
+
+# dim
+dim(iris)
+
+#internl structure
+glimpse(iris)
+
+# Covariance scatterplot Matrix. View how each variable varies with the rest as well as how the classes are distributed
+pairs(iris, col=iris$Species)
+
+```
+
+From the covariance matrix above it is evident that there are three classes two of which are inseparable but one is separable from the other two classes. So mda will model this data well. Radial kernel svm and FDA will model this data well too.
+
+# Normalize the data. Categorical variables are automatically ignored.
+```{r}
+# Estimate preprocessing parameters
+preproc.param <- iris %>% 
+  preProcess(method = c("center", "scale"))
+
+# Transform the data using the estimated parameters
+standardized_iris <- preproc.param %>% predict(iris)
+
+```
+
+# Split the data into training and test set
+```{r}
+set.seed(123)
+training.samples <- standardized_iris$Species %>% 
+  createDataPartition(p = 0.8, list = FALSE)
+
+train.data  <- standardized_iris[training.samples, ]
+test.data <- standardized_iris[-training.samples, ]
+```
+
+# Fit the MDA model
+```{r}
+# Fit the MDA model
+mda_model <- mda(Species~., data = train.data)
+mda_model
+```
+
+# Plot the model on classification of train.data (predictions on train data)
+```{r}
+# plot the model
+plot(mda_model, train.data)
+```
+
+# Plot the model on classification of test.data (predictions on new data)
+```{r}
+# plot the model
+plot(mda_model, test.data)
+```
+
+# MDA Model accuracy
+For mda model the output of predictions is predicted classes. So we access model accuracy as follows:
+mean(preds == test.data$Species)
+```{r}
+# Make predictions
+preds <- mda_model %>% predict(test.data)
+# Model accuracy
+mean(preds == test.data$Species)
+
+
+```
+
+Our model has an accuracy of 1. This implies that the model has done the best that there is to do. 100% correct classifications. 
+
+The best models for this data are FDA and MDA.
+
+# Model Accuracies Ranking
+The following is a ranking of how the models perfomed on classifying this iris data starting from the best model. 
+1. Flexible Discriminant Analysis: 1 accuracy
+1. Mixture Discriminant Analysis: 1 accuracy
+2. Radial Kernel SVM classifier:  0.967 accuracy

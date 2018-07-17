@@ -1,0 +1,182 @@
+---
+title: "Classification: Ridge Penalised Logistic Regression Diabetes Data"
+author: "Jane Kathambi"
+date: "8 June 2018"
+output: 
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+
+# Introduction
+A classification problem involves predicting a non-numerical value—that is, a categorical variable, also known as discrete variable.
+
+Most of the classification algorithms computes the probability of belonging to a given class. Observations are then assigned to the class that have the highest probability score.
+
+Generally, you need to decide a probability cutoff above which you consider the an observation as belonging to a given class.
+
+## Recap:
+Use Logistic Regression with ridge penalty when the classes are only two and are inseparable.
+Use radial kernel svms for inseparable data. Can be used for two or more than two classes. FDA (FDA is a flexible extension of LDA that uses non-linear combinations of predictors such as splines. FDA is useful to model multivariate non-normality or non-linear relationships among variables within each group, allowing for a more accurate classification.) works well too with any number of classes. 
+
+So for inseparabe data use Radial kernel svm, FDA or Logistic Regression with ridge penalty.
+
+Generally, the purpose of regularization is to balance accuracy and simplicity.
+This means a model with the smallest number of predictors that also gives a good accuracy. 
+
+# The PimaIndiansDiabetes2 Data
+PimaIndiansDiabetes2 is contained in the mlbench package. We will use it for predicting the probability of being diabetes positive or negative based on multiple clinical variables. This is a binary classification problem.
+
+This data set has two inseparable classes as we will see and so logistic regression will model this data well.
+
+The data contains 768 individuals (female) and 9 clinical variables for predicting the probability of individuals in being diabete-positive or negative:
+
+* pregnant: number of times pregnant
+* glucose: plasma glucose concentration
+* pressure: diastolic blood pressure (mm Hg)
+* triceps: triceps skin fold thickness (mm)
+* insulin: 2-Hour serum insulin (mu U/ml)
+* mass: body mass index (weight in kg/(height in m)^2)
+* pedigree: diabetes pedigree function
+* age: age (years)
+* diabetes: class variable
+
+#Load the required libraries.
+* glmnet package. Carries the ridge, lasso, and elsatic net regression function.
+* tidyverse. For data mangling.
+* caret. createDataPartition for partitioning the data into test set and train set.
+
+```{r}
+library(glmnet)
+library(tidyverse)
+library(caret)
+
+```
+
+# Exploring the PimaIndiansDiabetes2 Data
+
+```{r}
+# Load the data
+data("PimaIndiansDiabetes2", package = "mlbench")
+
+# remove Nas
+PimaIndiansDiabetes2 <- na.omit(PimaIndiansDiabetes2)
+
+# Inspect the data
+sample_n(PimaIndiansDiabetes2, 3)
+
+# remove the first column since it is not a feature
+PimaIndiansDiabetes2<-PimaIndiansDiabetes2[, -1]
+
+# Covariance scatterplot Matrix. View how each variable varies with the rest as well as how the classes are distributed.
+pairs(PimaIndiansDiabetes2, col=PimaIndiansDiabetes2$diabetes)
+
+# plot two variables to see how many classes there are and if they are separable.
+PimaIndiansDiabetes3=PimaIndiansDiabetes2[,c('glucose','pressure')]
+pairs(PimaIndiansDiabetes3, col=PimaIndiansDiabetes2$diabetes)
+
+# dim
+dim(PimaIndiansDiabetes2)
+```
+
+From the pairs plot above we see that there are two classes which are inseparable. So logistic regression will work well in this case.Radial kernel svm would work well too.
+
+## Normalize the data. Categorical variables are automatically ignored.
+```{r}
+# Estimate preprocessing parameters
+preproc.param <- PimaIndiansDiabetes2 %>% 
+  preProcess(method = c("center", "scale"))
+
+# Transform the data using the estimated parameters
+PimaIndiansDiabetes2_normalized <- preproc.param %>% predict(PimaIndiansDiabetes2)
+
+```
+
+
+# Split the data into training and test set
+We'll randomly split the data into training set (80% for building a predictive model) and test set (20% for evaluating the model). Make sure to set seed for reproductibility.
+```{r}
+set.seed(123)
+training.samples <- PimaIndiansDiabetes2_normalized$diabetes %>% 
+  createDataPartition(p = 0.8, list = FALSE)
+
+train.data  <- PimaIndiansDiabetes2_normalized[training.samples, ]
+test.data <- PimaIndiansDiabetes2_normalized[-training.samples, ]
+
+```
+
+# Fitting ridge penalized logistic regression model
+## Additionnal data preparation
+The R function model.matrix() helps to create the matrix of predictors and also automatically converts categorical predictors to appropriate dummy variables, which is required for the glmnet() function.
+```{r}
+# Dumy code categorical predictor variables
+x.train <- model.matrix(diabetes~., train.data)
+
+# Convert the outcome (class) to a numerical variable
+y.train <- ifelse(train.data$diabetes == "pos", 1, 0)
+
+# test data
+x.test <- model.matrix(diabetes ~., test.data)
+```
+
+To fit a ridge penalised logistic regression we use the glmnet package and set alpha=0.
+
+glmnet(x,y, family="binomial", alpha=0, lamda=NULL)
+
+* x: matrix of predictor variables.
+* y: the repsonse variable which is a binary variable.
+* family: response type, use "binomial" for a binary outcome.
+* alpha: the elasticnet mixing parameter. Allowed values include:
+    + 1: for lasso regression.
+    + 0: for ridge regression.
+    + A value between 0 and 1 (say 0.3) for elastic net regression.
+* lambda: a numeric value defining the amount of shrinkage. The analyst should specify. The best lambda is the one which minimizes the cross-validation prediction error rate. This can be determined automatically using cv.glmnet(). than the one obtained with lambda.min.
+Setting lamda=lambda.1se produces a simpler model(less variables) as compared to lambda.min, but the model might be a little bit less accurate.
+
+so:
+1. Find the best lambda using cross-validation. 
+    + cv.ridge<-cv.glmnet(x,y,alpha=0, family="binomial")
+    + best_lambda<-cv.ridge$lambda.min
+    
+2.  Use this lambda to fit the model on the training data.
+    + fit.ridge<-glmnet(x,y,alpha=0, family="binomial", lambda=best_lambda)
+
+
+```{r}
+# Find the best lambda using cross-validation
+set.seed(123) 
+cv.lasso <- cv.glmnet(x.train, y.train, alpha = 0, family = "binomial")# binomial means logistic regression and alpha=0 means ridge regression, so ridge penalised logistic regression.
+
+# Fit the final model on the training data using best lambda
+model <- glmnet(x.train, y.train, alpha = 0, family = "binomial",
+                lambda = cv.lasso$lambda.min)
+
+# Display regression coefficients
+coef(model)
+
+# Make predictions on the test data
+probabilities <- model %>% predict(newx = x.test)
+predicted.classes <- ifelse(probabilities > 0.5, "pos", "neg")
+
+# Model accuracy
+observed.classes <- test.data$diabetes
+mean(predicted.classes == observed.classes)
+```
+
+Our model has an accuracy of 0.7820 which implies that the model is doing fairly well.
+The best model for this data is fda.
+
+# Model Accuracies Ranking
+The following is a ranking of how the models perfomed on classifying this diabetes data strating from the best model. The best model for this data is FDA.
+
+1. Flexible Discriminant Analysis: 0.807 accuracy
+2. Radial Kernel SVM classifier: 0.794 accuracy
+3. Ridge Penalised Logistic Regression: 0.782 accuracy
+4. Mixture Discriminant Analysis: 0.769 accuracy
+
+

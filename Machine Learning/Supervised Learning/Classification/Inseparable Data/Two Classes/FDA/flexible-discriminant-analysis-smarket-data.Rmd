@@ -1,0 +1,159 @@
+---
+title: "Classification Flexible Discriminant Analysis. Smarket Data"
+author: "Jane Kathambi"
+date: "8 June 2018"
+output: 
+  html_document:
+    keep_md: yes
+    number_sections: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+# Introduction
+A classification problem involves predicting a non-numerical value—that is, a categorical variable, also known as discrete variable.
+
+Most of the classification algorithms computes the probability of belonging to a given class. Observations are then assigned to the class that have the highest probability score.
+
+Generally, you need to decide a probability cutoff above which you consider the an observation as belonging to a given class.
+
+## Recap
+** separable data:** 
+* LDA: Small training set. Also Linear kernel svms.
+* QDA: Large training set. Also Linear kernel svms.
+* RDA: Large training set and too many features. Also Linear kernel svms.
+
+**inseparable data:**
+* FDA: Multivariate inseparable data sets. Also radial kernel svms.
+* MDA: Classes have sub-classes which are distributed. Also radial kernel svms.
+
+# The Stock Market Data
+The Smarket data, is part of the ISLR library. 
+
+This data set consists of percentage returns for the S&P 500 stock index over 1250 days, from the beginning of 2001 until the end of 2005. 
+
+Each row is a date representing today, and for each date(today), the percentage returns for each of the five previous trading days, Lag1 through Lag5, have been recorded. Year, volume , and direction have been recorded too for each date(today. 
+
+The various variables are listed below:
+
+* Year
+    + The year that the observation was recorded
+* Lag1
+    + Percentage return for previous day
+* Lag2
+    + Percentage return for 2 days previous
+* Lag3
+    + Percentage return for 3 days previous
+* Lag4
+    + Percentage return for 4 days previous
+* Lag5
+    + Percentage return for 5 days previous
+* Volume
+    + Volume of shares traded (number of daily shares traded in billions)
+* Today
+    + Percentage return for today (date in question)
+* Direction
+    + A factor with levels Down and Up indicating whether the market had a positive or negative return on a given day
+    
+The Smarket data has two inseparable classes as we will see shortly. So fda will model this data well.
+
+# Classification:  FDA (Flexible discriminant analysis)
+FDA is a flexible extension of LDA that uses non-linear combinations of predictors such as splines. FDA is useful to model multivariate non-normality or non-linear relationships among variables within each group, allowing for a more accurate classification.
+
+# Load the required libraries.
+* tidyverse. for easy data manipulation and visualization
+* caret. for easy machine learning workflow. createDataPartition for partitioning the data into test set and train set.
+* fda library: has the fda function.
+* ISLR package. Carries the Smarket dataset.
+
+
+```{r}
+library(ISLR)
+library(tidyverse)
+library(caret)
+library(fda)
+```
+
+# Exploring the Stock Market Data
+We will begin by examining some numerical and graphical summaries of the Smarket data. 
+
+```{r}
+dim(Smarket)
+
+names(Smarket)
+
+summary(Smarket)
+
+glimpse(Smarket)
+
+head(Smarket)
+
+tail(Smarket)
+
+# Covariance scatterplot Matrix. View how each variable varies with the rest as well as how the classes are distributed.
+pairs(Smarket, col=Smarket$Direction)
+
+# plot two variables to see how many classes there are and if they are separable.
+Smarket2=Smarket[,c('Lag1','Lag2')]
+pairs(Smarket2, col=Smarket$Direction)
+```
+
+It is evident from the covariance matix that this data set has two classes that are inseparable. So fda will model this data well. Mda, radial kernel svm and ridge penalized logistic regressions will model this data well too.
+
+# Preparing the data
+It is always good to standardize the data before using it.
+
+## Normalize the data. Categorical variables are automatically ignored.
+
+```{r}
+# Estimate preprocessing parameters
+preproc.param <- Smarket %>% 
+  preProcess(method = c("center", "scale"))
+
+# Transform the data using the estimated parameters
+standardized_smarket <- preproc.param %>% predict(Smarket)
+
+```
+
+## Split the data into training and test set
+```{r}
+# Split the data into training (80%) and test set (20%)
+set.seed(123)
+training.samples <- standardized_smarket$Direction %>%
+  createDataPartition(p = 0.8, list = FALSE)
+train.data <- standardized_smarket[training.samples, ]
+test.data <- standardized_smarket[-training.samples, ]
+```
+
+# Fit the FDA model
+```{r}
+# Fit the FDA model
+fda_model <- fda(Direction~., data = train.data)
+fda_model
+```
+
+# FDA Model accuracy
+For fda model the output of predictions is predicted classes. So we access model accuracy as follows:
+mean(preds == test.data$Direction)
+```{r}
+# Make predictions
+preds <- fda_model %>% predict(test.data)
+# Model accuracy
+mean(preds == test.data$Direction)
+
+
+```
+
+Our model has an accuracy of 0.9438. This implies that the model is doing very well. 
+The best model for this data is radial kernel svm classifier.
+
+# Model Accuracies Ranking
+The following is a ranking of how the models perfomed on classifying this smarket data starting from the best model. 
+1. Radial Kernel SVM classifier:  0.9518 accuracy
+2. Flexible Discriminant Analysis: 0.9438 accuracy
+3. Mixture Discriminant Analysis: 0.9157 accuracy
+4. Ridge Penalised Logistic Regression: 0.8835 accuracy
+

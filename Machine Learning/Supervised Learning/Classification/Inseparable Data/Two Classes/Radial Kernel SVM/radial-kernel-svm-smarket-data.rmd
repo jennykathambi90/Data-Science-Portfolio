@@ -1,0 +1,164 @@
+---
+title: "Radial Kernel SVM Smarket Data"
+author: "Jane Kathambi"
+date: "8 June 2018"
+output: 
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+
+# Introduction
+A classification problem involves predicting a non-numerical value—that is, a categorical variable, also known as discrete variable.
+
+Most of the classification algorithms computes the probability of belonging to a given class. Observations are then assigned to the class that have the highest probability score.
+
+Generally, you need to decide a probability cutoff above which you consider the an observation as belonging to a given class.
+
+## Recap:
+Use radial kernel svms for inseparable data. Can be used for two or more than two classes. FDA (FDA is a flexible extension of LDA that uses non-linear combinations of predictors such as splines. FDA is useful to model multivariate non-normality or non-linear relationships among variables within each group, allowing for a more accurate classification.) works well too with any number of classes. Logistic Regression with ridge penalty works too but with only two classes.
+
+Radial kernel SVMs have two tuning parameters which are C and Sigma. C solves the problem of outliers i.e overlapping observations by allowing for soft margins, while Sigma reduces variance by regularizing the features since with radial kernels the feature space is enlarged to improve seperability of the classes.
+
+Generally, the purpose of regularization is to balance accuracy and simplicity.
+This means a model with the smallest number of predictors that also gives a good accuracy. 
+
+# The Stock Market Data
+The Smarket data, is part of the ISLR library. 
+
+This data set consists of percentage returns for the S&P 500 stock index over 1250 days, from the beginning of 2001 until the end of 2005. 
+
+Each row is a date representing today, and for each date(today), the percentage returns for each of the five previous trading days, Lag1 through Lag5, have been recorded. Year, volume , and direction have been recorded too for each date(today. 
+
+The various variables are listed below:
+
+* Year
+    + The year that the observation was recorded
+* Lag1
+    + Percentage return for previous day
+* Lag2
+    + Percentage return for 2 days previous
+* Lag3
+    + Percentage return for 3 days previous
+* Lag4
+    + Percentage return for 4 days previous
+* Lag5
+    + Percentage return for 5 days previous
+* Volume
+    + Volume of shares traded (number of daily shares traded in billions)
+* Today
+    + Percentage return for today (date in question)
+* Direction
+    + A factor with levels Down and Up indicating whether the market had a positive or negative return on a given day
+    
+The Smarket data has two inseparable classes as we will see shortly. So radial kernnel svm will model this data well.
+
+# Load the required packages
+* ISLR package. Carries the Smarket dataset.
+* tidyverse. For data mangling.
+* caret. for easy machine learning workflow.
+
+```{r}
+library(ISLR)
+library(tidyverse)
+library(caret)
+```
+
+# Exploring the Stock Market Data
+We will begin by examining some numerical and graphical summaries of the Smarket data. 
+
+```{r}
+dim(Smarket)
+
+names(Smarket)
+
+summary(Smarket)
+
+glimpse(Smarket)
+
+head(Smarket)
+
+tail(Smarket)
+
+# Covariance scatterplot Matrix. View how each variable varies with the rest as well as how the classes are distributed.
+pairs(Smarket, col=Smarket$Direction)
+
+# plot two variables to see how many classes there are and if they are separable.
+Smarket2=Smarket[,c('Lag1','Lag2')]
+pairs(Smarket2, col=Smarket$Direction)
+```
+
+It is evident from the covariance matix that this data set has two classes that are inseparable. So logistic regression will model this data well.
+
+# Preparing the data
+It is always good to standardize the data before using it.
+
+## Normalize the data. Categorical variables are automatically ignored.
+
+```{r}
+# Estimate preprocessing parameters
+preproc.param <- Smarket %>% 
+  preProcess(method = c("center", "scale"))
+
+# Transform the data using the estimated parameters
+standardized_smarket <- preproc.param %>% predict(Smarket)
+
+```
+
+## Split the data into training and test set
+```{r}
+# Split the data into training (80%) and test set (20%)
+set.seed(123)
+training.samples <- standardized_smarket$Direction %>%
+  createDataPartition(p = 0.8, list = FALSE)
+train.data <- standardized_smarket[training.samples, ]
+test.data <- standardized_smarket[-training.samples, ]
+```
+
+# Fitting radial kernel svm model
+
+To build a non-linear SVM classifier, we will use radial kernel function. The caret package can be used to easily compute the radial SVM non-linear model.
+
+The package automatically chooses the optimal values for the model tuning parameters, where optimal is defined as values that maximize the model accuracy.
+
+```{r}
+# Fit the model on the training set
+set.seed(123)
+
+model <- train(
+  Direction ~., data = train.data, method = "svmRadial",
+  trControl = trainControl("cv", number = 10),
+  tuneLength = 10
+  )
+# Print the best tuning parameter sigma and C that
+# maximizes model accuracy
+model$bestTune
+```
+
+# model accuracy
+
+```{r}
+# Make predictions on the test data
+predicted.classes <- model %>% predict(test.data)
+
+# Compute model accuracy rate
+mean(predicted.classes == test.data$Direction)
+```
+
+Our model has an accuracy of 0.9518. This implies that the model is doing very well.
+
+The best model for this data is radial kernel svm classifier.
+
+# Model Accuracies Ranking
+The following is a ranking of how the models perfomed on classifying this smarket data starting from the best model. 
+1. Radial Kernel SVM classifier:  0.9518 accuracy
+2. Flexible Discriminant Analysis: 0.9438 accuracy
+3. Mixture Discriminant Analysis: 0.9157 accuracy
+4. Ridge Penalised Logistic Regression: 0.8835 accuracy
+
+

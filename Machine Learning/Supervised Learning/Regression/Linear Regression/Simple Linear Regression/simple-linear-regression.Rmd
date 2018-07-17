@@ -1,0 +1,234 @@
+---
+title: "Regression: Simple Linear Regression"
+author: "Jane Kathambi"
+date: "17 July 2018"
+output: 
+  html_document:
+    keep_md: yes
+    number_sections: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+# Introduction
+In this study we  will explore simple linear regression. Simple linear regression involves only one predicor. We will use the marketing data set for  predicting sales units on the basis of the amount of money spent in the youtbe advertising media.
+
+We are assuming that the sales figures are only determined by youtube budget althogh this is not true since the marketing data set has two other advertising media (facebook and newspaper).
+
+A regression problem is one that requires us to predict a continuous outcome variable (y) based on the value of one or multiple predictor variables (x).
+
+The goal of regression model is to build a mathematical equation that defines y as a function of the x variables. Next, this equation can be used to predict the outcome (y) on the basis of new values of the predictor variables (x).
+
+Linear regression is the most simple and popular technique for predicting a continuous variable. It assumes a linear relationship between the outcome and the predictor variables.
+
+Simple linear regression equation can be written as y = b0 + b*x, where:
+
+* b0 is the intercept,
+* b is the regression weight or coefficient associated with the predictor variable x.
+
+Technically, the linear regression coefficients are detetermined so that the error in predicting the outcome value is minimized. This method of computing the beta coefficients is called the Ordinary Least Squares method.
+
+Note also that, linear regression models can incorporate both continuous and categorical predictor variables.
+
+Before building the linear regression model, you need to diagnostic whether linear model is suitable for your data. 
+
+## simple workflow to build a predictive regression model
+
+A simple workflow to build a predictive regression model is as follow:
+
+1. Diagnose whether linear model is suitable for your data i.e there is a linear relationship between the predictor(s) and the response.
+    + This can be easily checked by creating a scatter plot of the outcome variable vs the predictor variable.
+2. Randomly split your data into training set (80%) and test set (20%)
+3. Build the regression model using the training set
+4. Make predictions using the test set and compute the model accuracy metrics
+
+# Marketing Data
+The marketing data set [datarium package] contains the impact of three advertising medias (youtube, facebook and newspaper) on sales. In this study, it will be used for predicting sales units on the basis of the amount of money spent in the youtube advertising media only.
+
+We are assuming that the sales figures are only determined by youtube budget althogh this is not true since the marketing data set has two other advertising media (facebook and newspaper)
+
+Data are the advertising budget in thousands of dollars along with the sales. The advertising experiment has been repeated 200 times with different budgets and the observed sales have been recorded.
+
+The marketing data has the following variabes:
+
+* youtube
+* facebook
+* newspaper
+* sales
+
+First install the datarium package:
+
+if(!require(devtools)) install.packages("devtools")
+devtools::install_github("kassambara/datarium")
+
+Then, load marketing data set as follows:
+
+data("marketing", package = "datarium")
+
+# Load the required libraries
+* tidyverse for easy data manipulation and visualization
+* caret for easy machine learning workflow
+
+```{r}
+library(tidyverse)
+library(caret)
+theme_set(theme_bw())
+```
+
+# Load and inspect the data
+```{r}
+# Load the data
+data("marketing", package = "datarium")
+# Inspect the data
+sample_n(marketing, 3)
+```
+
+# Diagnose whether linear model is suitable
+Scatterplot of sales units versus youtube advertising budget. We will add a smoothed line.
+
+We are assuming that the sales figures are only determined by youtube budget althogh we know this is not true since the marketing data set has two other advertising media (facebook and newspaper)
+```{r}
+ggplot(marketing, aes(x = youtube, y = sales)) +
+  geom_point() +
+  stat_smooth()
+```
+
+The graph above shows a linearly increasing relationship between the sales and the youtube variables, which is a good thing. So a linear model is ideal.
+
+It's also possible to compute the correlation coefficient between the two variables using the R function cor():
+
+```{r}
+cor(marketing$sales, marketing$youtube)
+```
+The correlation coefficient measures the level of the association between two variables x and y. Its value ranges between -1 (perfect negative correlation: when x increases, y decreases) and +1 (perfect positive correlation: when x increases, y increases).
+
+A value closer to 0 suggests a weak relationship between the variables. A low correlation (-0.2 < x < 0.2) probably suggests that much of variation of the outcome variable (y) is not explained by the predictor (x). In such case, we should probably look for better predictor variables.
+
+In our example, the correlation coefficient is large enough i,e 0.7822244, so we can continue by building a linear model of y as a function of x.
+
+# Preparing the data
+## Split the data into training set and test set
+We'll randomly split the data into training set (80% for building a predictive model) and test set (20% for evaluating the model). Make sure to set seed for reproducibility.
+```{r}
+# Split the data into training and test set
+set.seed(123)
+training.samples <- marketing$sales %>%
+  createDataPartition(p = 0.8, list = FALSE)
+
+train.data  <- marketing[training.samples, ]
+test.data <- marketing[-training.samples, ]
+```
+
+
+# Fit a Simple linear regression
+The simple linear regression is used to predict a continuous outcome variable (y) based on one single predictor variable (x).
+
+We'll build a simple linear model to predict sales units based on the advertising budget spent on youtube. The regression equation can be written as sales = b0 + b1*youtube.
+
+We are assuming that the sales figures are only determined by youtube budget althogh we know this is not true since the marketing data set has two other advertising media (facebook and newspaper).
+
+We'll use the R function lm().
+
+We will use 10-fold cross validation to select optimal coefficient parameters.
+```{r}
+# Define train control for k fold cross validation
+train_control <- trainControl(method="cv", number=10)
+
+# Fit Simple Linear Model
+model <- train(sales~ youtube, data=train.data, trControl=train_control, method="lm")
+
+```
+
+# Coefficients significance
+We are assuming that the sales figures are only determined by youtube budget.
+
+The lm() function has computed the beta coefficients of the linear model. We access them as follows.
+
+```{r}
+summary(model)$coef
+```
+
+The output above shows the estimate of the regression beta coefficients (column Estimate) and their significance levels (column Pr(>|t|). The intercept (b0) is 8.38 and the coefficient of youtube variable is 0.046.
+
+The estimated regression equation can be written as follow: 
+* sales = 8.38 + 0.047*youtube. 
+
+Using this formula, for each new youtube advertising budget, you can predict the number of sale units.
+
+Youtube has a t value of 15.55821 and p value of <2e-16 meaning that it is significant. This means that based on the slope a unit change in youtube results to a signinficant change in sales. i.e for every 1 000 dollars increase in youtube advertising budget we can expect an increase of 0.045*1000 = 45 sales units, on average.
+
+# Model accuracy
+Before using a model for predictions, you need to assess the statistical significance of the model. The overall quality of the linear regression fit can be assessed using the following four quantities, three of which are displayed in the model summary and the last one has to be computed on test data:
+
+* Residual Standard Error (RSE),
+* R-squared (R2) and adjusted R2,
+* F-statistic, which has been already described in the previous section
+* Test data prediction error. (RMSE)
+
+*Model summary*
+The summary outputs shows 6 components, including:
+
+* Call. Shows the function call used to compute the regression model.
+
+* Residuals. Provide a quick view of the distribution of the residuals, which by definition have a mean zero. Therefore, the median should not be far from zero, and the minimum and maximum should be roughly equal in absolute value.
+
+* Coefficients. Shows the regression beta coefficients and their statistical significance. Predictor variables, that are significantly associated to the outcome variable, are marked by stars:
+    + Estimate: the intercept (b0) and the beta coefficient estimates associated to each predictor variable. The larger the better.
+    
+    + Std.Error: the standard error of the coefficient estimates. This represents the accuracy of the coefficients. The larger the standard error, the less confident we are about the estimate. The smaller the better.
+    
+    + t value: the t-statistic, which is the coefficient estimate (column 2) divided by the standard error of the estimate (column 3). The larger the better.
+    
+    + Pr(>|t|): The p-value corresponding to the t-statistic. The smaller the p-value, the more significant the estimate is. The smaller the better.
+
+
+* Residual standard error (RSE), 
+* R-squared (R2), 
+* F-statistic. The higher the F-statistic the better abd the lower the p-value of the F-statistic the better.
+
+Residual standard error (RSE), R-squared (R2) and the F-statistic are metrics that are used to check how well the model fits to our data.
+
+Let us run a summary of the model in order to access the model accuracy.
+
+```{r}
+summary(model)
+```
+## F-statisitc and corresponding p-value
+F-statistic: 242.1 on 1 and 160 DF,  p-value: < 2.2e-16
+
+The p-value of F-statistic is < 2.2e-16 which is highly significant. This means that, at least, one of the predictor variables is significantly related to the response variable.
+
+## RSE
+The RSE is 4.007 meaning that the observed sales values deviate from the predicted values by approximately 4.007 units in average.
+
+This corresponds to an error rate of 4.007/mean(train.data$sales) = 24%, which is relatively low.
+```{r}
+4.007/mean(train.data$sales)
+```
+
+## Adjusted R-squared
+An Adjusted R-squared of 0.5996 is relatively good and so the model has fit the data fairly well.
+
+## prediction errors on test data
+This is the ultmiate method for testing how accurate the model is.
+
+The model that we have built assumes that the sales figures are only determined by youtube budget.
+```{r}
+# Make sales predictions
+predictions <- model %>% predict(test.data)
+
+# Model performance
+# (a) Compute the prediction error, RMSE
+RMSE(predictions, test.data$sales)
+
+# (b) Compute R-square
+R2(predictions, test.data$sales)
+```
+
+RMSE: 3.501939
+R-Square: 0.6880934
+
+The RMSE is 3.501939 (error rate of 3.501939/mean(test.data$sales)=21% ) which is relatively low while the R-square is 0.6880934 which is relatively high hence the model has fit the data fairly well.

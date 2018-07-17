@@ -1,0 +1,253 @@
+---
+title: "Regression: Multiple Linear Regression With Interactions"
+author: "Jane Kathambi"
+date: "17 July 2018"
+output: 
+  html_document:
+    keep_md: yes
+    number_sections: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+# Introduction
+In this study we will explore how to compute multiple linear regression with interaction effects.
+
+Previously, we have described how to build a multiple linear regression model for predicting a continuous outcome variable (y) based on multiple predictor variables (x).
+
+For example, to predict sales, based on advertising budgets spent on youtube and facebook, the model equation is sales = b0 + b1*youtube + b2*facebook, where, b0 is the intercept; b1 and b2 are the regression coefficients associated respectively with the predictor variables youtube and facebook.
+
+The above equation, also known as additive model, investigates only the main effects of predictors. It assumes that the relationship between a given predictor variable and the outcome is independent of the other predictor variables.
+
+Considering our example, the additive model assumes that, the effect on sales of youtube advertising is independent of the effect of facebook advertising.
+
+This assumption might not be true. For example, spending money on facebook advertising may increase the effectiveness of youtube advertising on sales. In marketing, this is known as a synergy effect, and in statistics it is referred to as an interaction effect.
+
+In this chapter, we'll explore:
+
+* the equation of multiple linear regression with interaction
+* R codes for computing the regression coefficients associated with the main effects and the interaction effects
+* how to interpret the interaction effect
+
+## Equation
+The multiple linear regression equation, with interaction effects between two predictors (x1 and x2), can be written as follow:
+
+y = b0 + b1*x1 + b2*x2 + b3*(x1:x2)
+
+Considering our example, it becomes:
+
+sales = b0 + b1*youtube + b2*facebook + b3*(youtube:facebook)
+
+This can be also written as:
+
+sales = b0 + b1*youtube + (b2 +b3*youtube)*facebook
+or as:
+sales = b0 + (b1 + b3*facebook)*youtube + b2*facebook
+
+b3 can be interpreted as the increase in the effectiveness of youtube advertising for a one unit increase in facebook advertising (or vice-versa).
+
+## simple workflow to build a predictive regression model
+A simple workflow to build a predictive regression model is as follow:
+
+1. Diagnose whether linear model is suitable for your data i.e there is a linear relationship between the predictor(s) and the response.
+    + This can be easily checked by creating a scatter plot of the outcome variable vs the predictor variable.
+2. Randomly split your data into training set (80%) and test set (20%)
+3. Build the regression model using the training set
+4. Make predictions using the test set and compute the model accuracy metrics
+
+# Marketing Data
+The marketing data set [datarium package] contains the impact of three advertising medias (youtube, facebook and newspaper) on sales. It will be used for predicting sales units on the basis of the amount of money spent in the three advertising medias.
+
+Data are the advertising budget in thousands of dollars along with the sales. The advertising experiment has been repeated 200 times with different budgets and the observed sales have been recorded.
+
+The marketing data has the following variabes:
+
+* youtube
+* facebook
+* newspaper
+* sales
+
+First install the datarium package:
+
+if(!require(devtools)) install.packages("devtools")
+devtools::install_github("kassambara/datarium")
+
+Then, load marketing data set as follows:
+
+data("marketing", package = "datarium")
+
+# Load the required libraries
+* tidyverse for easy data manipulation and visualization
+* caret for easy machine learning workflow
+
+```{r}
+library(tidyverse)
+library(caret)
+theme_set(theme_bw())
+```
+
+# Load and inspect the data
+```{r}
+# Load the data
+data("marketing", package = "datarium")
+# Inspect the data
+sample_n(marketing, 3)
+```
+
+# Diagnose whether linear model is suitable
+Scatterplot of sales units versus budget spent in the three advertising media (youtube, facebook, newspaper).
+We will add a smoothed line.
+
+```{r}
+# modigy the data to enable facet wrap with media
+marketing_new<-marketing%>%
+  gather(media, budget, -sales)
+
+# plot the scatter plot based on the three media
+p<-ggplot(marketing_new, aes(x = budget, y = sales)) +
+  geom_point() +
+  stat_smooth()+
+  facet_wrap(~media)
+
+# Display the scatter plot.
+p
+```
+
+The graph above shows a: 
+1. Linearly increasing relationship between the sales and the youtube variables, which is a good thing.
+2. Linearly increasing relationship between the sales and the facebook variables, which is a good thing.
+3. Non-linearly increasing relationship between the sales and the newspaper variables.
+
+So we will fit a linear model to predict sales based on youtube and facebook variables only.
+
+# Preparing the data
+
+## Split the data into training set and test set
+We'll randomly split the data into training set (80% for building a predictive model) and test set (20% for evaluating the model). Make sure to set seed for reproducibility.
+```{r}
+# Split the data into training and test set
+set.seed(123)
+training.samples <- marketing$sales %>%
+  createDataPartition(p = 0.8, list = FALSE)
+
+train.data  <- marketing[training.samples, ]
+test.data <- marketing[-training.samples, ]
+```
+
+# Fit an Additive model
+
+We will use 10-fold cross validation to select optimal coefficient parameters.
+```{r}
+# Define train control for k fold cross validation
+train_control <- trainControl(method="cv", number=10)
+
+# Fit Multiple Linear Model
+model <- train(sales~youtube+facebook, data=train.data, trControl=train_control, method="lm")
+
+# summary of the model
+summary(model)
+
+```
+
+## Test Data Prediction error
+The ultmate metric to use for testing model accuracy is by obtaining the prediction errors i.e RMSE on test data or new data.
+
+The lower the prediction errors i.e RMSE on the new data the better the model.
+
+We'll make predictions using the test data in order to evaluate the performance of our regression model.
+    
+```{r}
+# Make predictions
+predictions <- model %>% predict(test.data)
+
+# Model performance
+# (a) Compute the prediction error, RMSE
+RMSE(predictions, test.data$sales)
+
+# (b) Compute R-square
+R2(predictions, test.data$sales)
+```
+
+From the output above, the prediction error RMSE is 1.58, representing an error rate of 1.58/mean(test.data$sales) = 9.2%, which is good.
+
+The R2 is 0.94, meaning that the observed and the predicted outcome values are highly correlated, which is very good.
+
+# Fit an Additive model with interaction effects
+In R, you include interactions between variables using the * operator:
+
+Two ways to build the model
+* Use this:
+    + model2 <- lm(sales ~ youtube + facebook + youtube:facebook,
+             data = marketing)
+             
+*Or simply, use this: 
+    +  <- lm(sales ~ youtube*facebook, data = train.data)
+
+We will use 10-fold cross validation to select optimal coefficient parameters.
+```{r}
+# Define train control for k fold cross validation
+train_control <- trainControl(method="cv", number=10)
+
+# Fit Multiple Linear Model
+model <- train(sales~youtube+facebook+facebook:youtube, data=train.data, trControl=train_control, method="lm")
+
+# summary of the model
+summary(model)
+
+```
+
+## Test Data Prediction error
+The ultmate metric to use for testing model accuracy is by obtaining the prediction errors i.e RMSE on test data or new data.
+
+The lower the prediction errors i.e RMSE on the new data the better the model.
+
+We'll make predictions using the test data in order to evaluate the performance of our regression model.
+    
+```{r}
+# Make predictions
+predictions <- model %>% predict(test.data)
+
+# Model performance
+# (a) Compute the prediction error, RMSE
+RMSE(predictions, test.data$sales)
+
+# (b) Compute R-square
+R2(predictions, test.data$sales)
+```
+
+From the output above, the prediction error RMSE is 0.96, representing an error rate of 0.96/mean(test.data$sales) = 5.6%, which is good.
+
+The R2 is 0.98, meaning that the observed and the predicted outcome values are highly correlated, which is very good.
+
+## Interpretation
+It can be seen that all the coefficients, including the interaction term coefficient, are statistically significant, suggesting that there is an interaction relationship between the two predictor variables (youtube and facebook advertising).
+
+Our model equation looks like this:
+
+sales = 7.89 + 0.019*youtube + 0.029*facebook + 0.0009*youtube*facebook
+
+Reorganizing the model fo better interpretability:
+
+1. sales = 7.89 + 0.019*youtube + (0.029 + 0.0009*youtube)*facebook
+    + An increase in facebook advertising of 1000 dollars will be associated with an increase in sales of (0.029 +  0.0009*youtube)*1000 = 29 + 0.9*youtube units.
+
+2. sales = 7.89 + (0.019  + 0.0009*facebook)*youtube + 0.029*facebook
+    + And an increase in youtube advertising of 1000 dollars will be associated with an increase in sales of (0.019 +  0.0009*facebook)*1000 = 19 + 0.9*facebook units.
+    
+This means spending more on facebook generally leads to more sales.
+
+Note that, sometimes, it is the case that the interaction term is significant but not the main effects. The hierarchical principle states that, if we include an interaction in a model, we should also include the main effects, even if the p-values associated with their coefficients are not significant (James et al. 2014).
+
+# Comparing the additive and the interaction models
+The prediction error RMSE of the interaction model is 0.963, which is lower than the prediction error of the additive model (1.58).
+
+Additionally, the R-square (R2) value of the interaction model is 98% compared to only 93% for the additive model.
+
+These results suggest that the model with the interaction term is better than the model that contains only main effects. So, for this specific data, we should go for the model with the interaction model.
+
+# Discussion
+This study describes how to compute multiple linear regression with interaction effects. Interaction terms should be included in the model if they reduce the RMSE and increase the R2.
+

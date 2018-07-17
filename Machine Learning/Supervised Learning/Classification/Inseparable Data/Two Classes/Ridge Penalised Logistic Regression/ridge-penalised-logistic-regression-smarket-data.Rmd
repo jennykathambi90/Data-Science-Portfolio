@@ -1,0 +1,205 @@
+---
+title: "Classification Ridge Penalised Logistic Regression. Smarket Data set"
+author: "Jane Kathambi"
+date: "8 June 2018"
+output: 
+  html_document:
+    keep_md: yes
+    number_sections: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+# Introduction
+A classification problem involves predicting a non-numerical value—that is, a categorical variable, also known as discrete variable.
+
+Most of the classification algorithms computes the probability of belonging to a given class. Observations are then assigned to the class that have the highest probability score.
+
+Generally, you need to decide a probability cutoff above which you consider the an observation as belonging to a given class.
+
+## Recap:
+Use Logistic Regression with ridge penalty when the classes are only two and are inseparable.
+Use radial kernel svms for inseparable data. Can be used for two or more than two classes. FDA (FDA is a flexible extension of LDA that uses non-linear combinations of predictors such as splines. FDA is useful to model multivariate non-normality or non-linear relationships among variables within each group, allowing for a more accurate classification.) works well too with any number of classes. 
+
+So for inseparabe data use Radial kernel svm, FDA or Logistic Regression with ridge penalty.
+
+Generally, the purpose of regularization is to balance accuracy and simplicity.
+This means a model with the smallest number of predictors that also gives a good accuracy. 
+
+# The Stock Market Data
+The Smarket data, is part of the ISLR library. 
+
+This data set consists of percentage returns for the S&P 500 stock index over 1250 days, from the beginning of 2001 until the end of 2005. 
+
+Each row is a date representing today, and for each date(today), the percentage returns for each of the five previous trading days, Lag1 through Lag5, have been recorded. Year, volume , and direction have been recorded too for each date(today. 
+
+The various variables are listed below:
+
+* Year
+    + The year that the observation was recorded
+* Lag1
+    + Percentage return for previous day
+* Lag2
+    + Percentage return for 2 days previous
+* Lag3
+    + Percentage return for 3 days previous
+* Lag4
+    + Percentage return for 4 days previous
+* Lag5
+    + Percentage return for 5 days previous
+* Volume
+    + Volume of shares traded (number of daily shares traded in billions)
+* Today
+    + Percentage return for today (date in question)
+* Direction
+    + A factor with levels Down and Up indicating whether the market had a positive or negative return on a given day
+    
+The Smarket data has two inseparable classes as we will see shortly. So logistic regression will model this data well.
+
+#Load the required libraries.
+* ISLR package. Carries the Smarket dataset.
+* * glmnet package. Carries the ridge, lasso, and elsatic net regression functions.
+* tidyverse. For data mangling.
+* caret. createDataPartition for partitioning the data into test set and train set.Preprocess for data preprocessing.
+
+```{r}
+library(caret)
+library(ISLR)
+library(tidyverse)
+library(glmnet)
+```
+
+# Exploring the Stock Market Data
+We will begin by examining some numerical and graphical summaries of the Smarket data. 
+
+```{r}
+dim(Smarket)
+
+names(Smarket)
+
+summary(Smarket)
+
+glimpse(Smarket)
+
+head(Smarket)
+
+tail(Smarket)
+
+# Covariance scatterplot Matrix. View how each variable varies with the rest as well as how the classes are distributed.
+pairs(Smarket, col=Smarket$Direction)
+
+# plot two variables to see how many classes there are and if they are separable.
+Smarket2=Smarket[,c('Lag1','Lag2')]
+pairs(Smarket2, col=Smarket$Direction)
+```
+
+It is evident from the covariance matix that this data set has two classes that are inseparable. So logistic regression will model this data well.
+
+# Preparing the data
+It is always good to standardize the data before using it.
+
+## Normalize the data. Categorical variables are automatically ignored.
+
+```{r}
+# Estimate preprocessing parameters
+preproc.param <- Smarket %>% 
+  preProcess(method = c("center", "scale"))
+
+# Transform the data using the estimated parameters
+standardized_smarket <- preproc.param %>% predict(Smarket)
+
+```
+
+## Split the data into training and test set
+```{r}
+# Split the data into training (80%) and test set (20%)
+set.seed(123)
+training.samples <- standardized_smarket$Direction %>%
+  createDataPartition(p = 0.8, list = FALSE)
+train.data <- standardized_smarket[training.samples, ]
+test.data <- standardized_smarket[-training.samples, ]
+```
+
+## Additionnal data preparation
+The R function model.matrix() helps to create the matrix of predictors and also automatically converts categorical predictors to appropriate dummy variables, which is required for the glmnet() function.
+
+```{r}
+# Matrix of predictor variables
+x.train <- model.matrix(Direction~., train.data)
+
+# Convert the outcome (Direction) to a numerical variable
+y.train <- ifelse(train.data$Direction == "Up", 1, 0)
+
+# test data
+x.test <- model.matrix(Direction ~., test.data)
+```
+
+# Fitting ridge penalized logistic regression model
+To fit a ridge penalised logistic regression we use the glmnet package and set alpha=0.
+
+glmnet(x,y, family="binomial", alpha=0, lamda=NULL)
+
+* x: matrix of predictor variables.
+* y: the repsonse variable which is a binary variable.
+* family: response type, use "binomial" for a binary outcome.
+* alpha: the elasticnet mixing parameter. Allowed values include:
+    + 1: for lasso regression.
+    + 0: for ridge regression.
+    + A value between 0 and 1 (say 0.3) for elastic net regression.
+* lambda: a numeric value defining the amount of shrinkage. The analyst should specify. The best lambda is the one which minimizes the cross-validation prediction error rate. This can be determined automatically using cv.glmnet(). than the one obtained with lambda.min.
+Setting lamda=lambda.1se produces a simpler model(less variables) as compared to lambda.min, but the model might be a little bit less accurate.
+
+so:
+1. Find the best lambda using cross-validation. 
+    + cv.ridge<-cv.glmnet(x,y,alpha=0, family="binomial")
+    + best_lambda<-cv.ridge$lambda.min
+    
+2.  Use this lambda to fit the model on the training data.
+    + fit.ridge<-glmnet(x,y,alpha=0, family="binomial", lambda=best_lambda)
+
+## Find the best lambda
+
+```{r}
+# Find the best lambda using cross-validation
+set.seed(123) 
+cv.lasso <- cv.glmnet(x.train, y.train, alpha = 0, family = "binomial")# binomial means logistic regression and alpha=0 means ridge regression, so ridge penalised logistic regression.
+```
+
+## Fit the model using the best lambda
+
+```{r}
+# Fit the final model on the training data using best lambda
+model <- glmnet(x.train, y.train, alpha = 0, family = "binomial",
+                lambda = cv.lasso$lambda.min)
+
+# Display regression coefficients
+coef(model)
+```
+
+## Accessing model accuracy
+
+```{r}
+
+# Make predictions on the test data
+probabilities <- model %>% predict(newx = x.test)
+predicted.classes <- ifelse(probabilities > 0.5, "Up", "Down")
+
+# Model accuracy
+observed.classes <- test.data$Direction
+mean(predicted.classes == observed.classes)
+```
+
+Our model has an accuracy of 0.8835 which implies that the model is doing fairly well.
+
+The best model for this data is radial kernel svm classifier.
+
+# Model Accuracies Ranking
+The following is a ranking of how the models perfomed on classifying this smarket data starting from the best model. 
+1. Radial Kernel SVM classifier:  0.9518 accuracy
+2. Flexible Discriminant Analysis: 0.9438 accuracy
+3. Mixture Discriminant Analysis: 0.9157 accuracy
+4. Ridge Penalised Logistic Regression: 0.8835 accuracy
+
