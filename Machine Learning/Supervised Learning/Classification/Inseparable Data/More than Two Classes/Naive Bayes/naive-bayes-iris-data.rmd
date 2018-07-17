@@ -1,0 +1,134 @@
+---
+title: "Naive Bayes Classifier: Iris Data"
+author: "Jane Kathambi"
+date: "17 July 2018"
+output: 
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+
+# Introduction
+A classification problem involves predicting a non-numerical value—that is, a categorical variable, also known as discrete variable.
+
+Most of the classification algorithms computes the probability of belonging to a given class. Observations are then assigned to the class that have the highest probability score.
+
+Generally, you need to decide a probability cutoff above which you consider the an observation as belonging to a given class.
+
+## Recap:
+The Naive Bayes classifier is a simple and powerful method that can be used for binary and multiclass classification problems.
+Use radial kernel svms for inseparable data. Can be used for two or more than two classes. FDA (FDA is a flexible extension of LDA that uses non-linear combinations of predictors such as splines. FDA is useful to model multivariate non-normality or non-linear relationships among variables within each group, allowing for a more accurate classification.) works well too with any number of classes. Logistic Regression with ridge penalty works too but with only two classes.
+
+Naive Bayes classifier predicts the class membership probability of observations using Bayes theorem, which is based on conditional probability, that is the probability of something to happen, given that something else has already occurred.
+
+Observations are assigned to the class with the largest probability score.
+
+We will use the caret R package because it can automatically train the model and assess the model accuracy using k-fold cross-validation and return the optimal model.
+
+Generally, the purpose of regularization is to balance accuracy and simplicity.
+This means a model with the smallest number of predictors that also gives a good accuracy. 
+
+#The Iris data set
+The iris data set will be used for multiclass classification tasks. It contains the length and width of sepals and petals for three iris species. We want to predict the species based on the sepal and petal parameters.
+
+This data has three classes of which two are inseparable classes as we will see shortly. So naive bayes classifier will model this data well. Radial kernnel svm, MDA and FDA will model this data well too.
+
+# Load the required packages
+* tidyverse. For data mangling.
+* caret. for easy machine learning workflow.
+
+```{r}
+library(tidyverse)
+library(caret)
+```
+
+# Exploring the Iris Data
+
+```{r}
+# Load the data
+data("iris")
+
+# check for Nas
+anyNA(iris)
+
+# Inspect the data
+sample_n(iris, 3)
+
+# dim
+dim(iris)
+
+#internl structure
+glimpse(iris)
+
+# Covariance scatterplot Matrix. View how each variable varies with the rest as well as how the classes are distributed
+pairs(iris, col=iris$Species)
+
+```
+
+From the covariance matrix above it is evident that there are three classes two of which are inseparable but one is separable from the other two classes. So naive bayes classifier will model this data well. Radial kernnel svm, MDA and FDA will model this data well too.
+
+# Normalize the data. Categorical variables are automatically ignored.
+```{r}
+# Estimate preprocessing parameters
+preproc.param <- iris %>% 
+  preProcess(method = c("center", "scale"))
+
+# Transform the data using the estimated parameters
+standardized_iris <- preproc.param %>% predict(iris)
+
+```
+
+# Split the data into training and test set
+```{r}
+set.seed(123)
+training.samples <- standardized_iris$Species %>% 
+  createDataPartition(p = 0.8, list = FALSE)
+
+train.data  <- standardized_iris[training.samples, ]
+test.data <- standardized_iris[-training.samples, ]
+```
+
+
+# Fitting naive bayes model
+
+We will use the caret package to easily compute the naive bayes model.
+
+The package automatically chooses the optimal values for the model tuning parameters, where optimal is defined as values that maximize the model accuracy.
+
+```{r}
+# Build the naive bayes model
+set.seed(123)
+model <- train(Species ~., data = train.data, method = "nb", 
+               trControl = trainControl("cv", number = 10))
+# Print the best tuning parameter sigma and C that
+# maximizes model accuracy
+model$bestTune
+```
+
+# model accuracy
+
+```{r}
+# Make predictions on the test data
+predicted.classes <- model %>% predict(test.data)
+
+# Compute model accuracy rate
+mean(predicted.classes == test.data$Species)
+```
+
+Our model has an accuracy of  0.9333333. This implies that the model is doing very well.
+
+The best models for this data are FDA and MDA.
+
+# Model Accuracies Ranking
+
+The following is a ranking of how the models perfomed on classifying this iris data starting from the best model. 
+
+1. Flexible Discriminant Analysis: 1 accuracy
+1. Mixture Discriminant Analysis: 1 accuracy
+2. Radial Kernel SVM classifier:  0.967 accuracy
+3. Naive Bayes Classifier. 0.9333333 accuracy
