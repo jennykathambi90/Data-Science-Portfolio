@@ -584,7 +584,7 @@ Then we will test out our API.
 
 ```{r}
 # Test get_land_sale_details with "nairobi"
-nairobi_land_sale_details=get_land_sale_details(region = "langata")
+nairobi_land_sale_details=get_land_sale_details(region = "nairobi")
 
 nairobi_land_sale_details
 
