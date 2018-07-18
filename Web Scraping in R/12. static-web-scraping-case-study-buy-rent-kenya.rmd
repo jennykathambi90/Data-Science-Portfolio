@@ -1,0 +1,594 @@
+---
+title: "Static Web Scraping: Case Study, Land for sale, BuyRentKenya"
+author: "Jane Kathambi"
+date: "11 July 2018"
+output: 
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+
+# Web scraping: Land for sale in Kiambu
+We are  going to scrape the buy rent kenya website in order to obtain some information about the value of land in Kiambu region. Then at the end of this chapter we will build an API for scraping data for any region.
+
+Here is the kiambu region URL:
+https://www.buyrentkenya.com/plots-land-for-sale/kiambu
+
+Since we dont have the API to this site we are going to use rvest read_html(url) function to obtain the webpage in html format. Then later use rvest functions (html_node(), html_text()) to scrape the data.
+
+We will follow the following steps:
+
+1. Inspect buy rent kenya kiambu page on land to understand the html structure
+2. Get the HTML content of Buy Rent Kenya page for land on sale in Kiambu. We will use rvest read_html(url) function.
+3. Extract the land prices in kiambu from the page. We will use rvest with css selectors.
+4. Clean turn it into a data frame and clean up the data frame
+5. Turn it into a function i.e a API that I can use for other regions
+
+NB: This web page is dynamic but for this study we will only consider a single static page.
+
+# Load required libraries
+```{r}
+library(rvest)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(lubridate)
+```
+
+# Inspect buy rent kenya kiambu page on land 
+This is so as to understand the html structure and identify useful css selectors for aiding in scraping the land data for sale in Kiambu
+
+I have identified the major css selector i.e the class "result-card" that we will use to select the listings of land for sale in Kiambu.
+
+#Get the html content of buy rent kenya
+As earlier mentioned we will use rvest read_html() function to retrieve the html content of the page.
+```{r}
+#Kiambu url
+kiambu_url<-"https://www.buyrentkenya.com/plots-land-for-sale/kiambu"
+
+# Get the html content
+kiambu_shamba_page=read_html(kiambu_url)
+
+```
+
+# Extracting information: Extract the element containing the row details-container class 
+I will use rvest with css selectors.
+
+To begin with I will use html_node() to extract the element containing the result-card class .
+
+After this I will html_text() to extract the text contents of the html elements.
+
+In addition I will use html_attr() to extract agent names from agency image logos.
+
+
+```{r}
+# Extract the listings data
+result_card_elements <- html_nodes(x=kiambu_shamba_page, css=".result-card")
+result_card_elements
+
+#Extract each element in details container element as text
+# extract label_mandate_type
+label_mandate_type<-html_text(html_node(x=result_card_elements, css=".label-mandate-type"))
+
+# extract label_status
+label_status<-html_text(html_node(x=result_card_elements, css=".label-status"))
+
+# extract suburb_town
+suburb_town<-html_text(html_node(x=result_card_elements, css=".suburb-town"))
+
+# extract category
+category<-html_text(html_node(x=result_card_elements, css=".category"))
+
+# extract listing heading
+listing_heading<-html_text(html_node(x=result_card_elements, css=".listing-heading"))
+
+#extract listing description
+listing_description<-html_text(html_node(x=result_card_elements, css=".listing-description"))
+
+#extract area
+area<-html_text(html_node(x=result_card_elements, css=".area-attribute"))
+
+# extract listing price
+listing_price<-html_text(html_node(x=result_card_elements, css=".listing-price"))
+
+# extract price per square meter
+price_per_square_meter<-html_text(html_node(x=result_card_elements, css=".perprice"))
+
+
+# Extract agency name
+
+# uSING css selector agency-name returns a vector of length 20 with only two non NA representing Individual Listing. So lets explore another css selector
+agency_name1<-html_text(html_node(x=result_card_elements, css=".agency-name"))
+agency_name1
+
+# uSING html_attr() together with the css selector lazy for the logo returns a vector of length 18 with with the alt message of the image as the agency name. This css returns a majority of the names but skips two agency names. So lets find a away of correcting this.
+alt_agency_name<-html_attr(html_nodes(x=result_card_elements, css=".lazy"), "alt")
+alt_agency_name
+
+# We will create an empty vector and store into it the agency names as we traverse the 20 result-card_elements using the lazy css selector for the image. We assume that all result card elements have a logo image, and therefore in case any result card element does not have the logo image a NA will be returned as the agency name. So our resulting vector will be of length 20.
+
+# initialize an empty vector to store the agency names as we traverse result-card_elements
+agency_name_vector=c()
+
+agencies<-function(result_card_elements){
+  for (i in result_card_elements){
+    
+  # Return the alt attribute of the logo. The alt attribute contains the agency name. If the result card element does not have a logo NA will be returned
+  agency_name<-html_attr(html_node(x=i, css=".lazy"), "alt")
+  
+  # merge the agency name with the agency name vector
+  agency_name_vector<-c(agency_name_vector, agency_name)
+
+  
+  }# end for loop
+  
+  # return agency name vector
+  agency_name_vector
+  
+}# end function
+
+# call the agencies vector and pass the result_card_elements. 
+#It returns agency_name_vector populated with agency names
+agency_name_vector=agencies(result_card_elements)
+length(agency_name_vector)
+
+# View agency names
+# We see that there are two NAs and we know pretty well that they represet "Individual Listing".
+# So let us replace NAs with "Individual Listing"
+View(agency_name_vector)
+
+# Replace NAs with "Individual Listing"
+agency_name_vector=ifelse(is.na(agency_name_vector), "Individual Listing",agency_name_vector )
+
+# View to confirm NAs have been replace with "Individual Listing"
+View(agency_name_vector)
+
+#rename
+agency_name<-agency_name_vector
+
+# extract the listing date
+listing_date<-html_text(html_node(x=result_card_elements, css=".listing-date"))
+
+
+```
+
+
+# Clean it up and turn it into a data frame
+
+## Normalising information
+Now it's time to put together the information in a nice format. I will put all these scraped vectors together into a dataframe.
+```{r}
+#Put these vectors together in a dataframe
+kiambu_land_sale_details<-data.frame(category, label_status, label_mandate_type, suburb_town,listing_heading,listing_description, area, listing_price, price_per_square_meter, agency_name, listing_date)
+
+```
+
+##Inspecting the data frame
+Use the view function to view it.
+
+You notice that the data values are messy. They need to be cleaned up
+```{r}
+#view the data frame
+View(kiambu_land_sale_details)
+```
+
+##Cleaning up the data frame
+### Correcting names and variables
+Remove all trailing and leading white spaces in the entire dataframe then:
+1. label_status: 
+    + Replace empty cells with NAs
+    
+2. suburb_town variable: 
+    + split this variable into two columns i.e suburb, town
+    
+3. area: 
+    + remove the square meter measurement from the values. 
+    + Rename the area variable to area_per_square_meter.
+    + remove commas.
+    
+4. listing_price:
+    + Remove leading KES. 
+    + Trim the left side to remove the resulting white space.
+    + Remove all characters after the first white space. 
+    + Rename listing price to listing_price_KES.
+    + remove commas.
+    
+5. price_per_square_meter:
+    + Remove the leading KES
+    + Remove the trailing /m2
+    + remove commas.
+    
+6. listing_date:
+    + Convert the listing_date column to dates.
+
+```{r}
+# remove all leading and trailing white spaces in the entire data frame
+# the function below returns a matrix
+kiambu_land_sale_details<- apply(kiambu_land_sale_details,2,function(x)gsub('\\s+', '',x))
+
+#convert the resulting matrix back to a data frame
+kiambu_land_sale_details<-as.data.frame(kiambu_land_sale_details)
+
+#label_status variable:
+#Replace empty cells with NAs
+kiambu_land_sale_details$label_status[kiambu_land_sale_details$label_status=='']=NA
+
+#suburb_town variable: 
+#split this variable into two columns i.e suburb, town
+kiambu_land_sale_details<-kiambu_land_sale_details%>%
+  separate(suburb_town, c('suburb', 'town'), sep=",")
+
+#area variable:
+# Remove trailing m² pattern
+kiambu_land_sale_details$area=str_replace_all(kiambu_land_sale_details$area, "m²", "")
+
+# Remove commas
+kiambu_land_sale_details$area=gsub(",", "", kiambu_land_sale_details$area, fixed = TRUE)
+
+# Rename the area variable to area_per_square_meter
+names(kiambu_land_sale_details)[names(kiambu_land_sale_details) == 'area'] <- 'area_per_square_meter'
+
+#listing_price variable: 
+# Remove leading KES pattern
+kiambu_land_sale_details$listing_price=str_replace_all(kiambu_land_sale_details$listing_price, "KES","")
+
+# trim the left side to remove the resulting white space
+kiambu_land_sale_details$listing_price=str_trim(kiambu_land_sale_details$listing_price, 'left')
+
+#then remove all characters after the first white space
+kiambu_land_sale_details$listing_price= gsub("\n.*","",kiambu_land_sale_details$listing_price)
+
+# Remove commas
+kiambu_land_sale_details$listing_price=gsub(",", "", kiambu_land_sale_details$listing_price, fixed = TRUE)
+
+# Rename the listing_price variable to listing_price_KES
+names(kiambu_land_sale_details)[names(kiambu_land_sale_details) == 'listing_price'] <- 'listing_price_KES'
+
+# price_per_square_meter variable:
+# remove leading KES
+kiambu_land_sale_details$price_per_square_meter=str_replace_all(kiambu_land_sale_details$price_per_square_meter, "KES","")
+
+# remove trailing /m2
+kiambu_land_sale_details$price_per_square_meter=str_replace_all(kiambu_land_sale_details$price_per_square_meter, "/m2","")
+
+# Remove commas
+kiambu_land_sale_details$price_per_square_meter=gsub(",", "", kiambu_land_sale_details$price_per_square_meter, fixed = TRUE)
+
+#Replace empty cells with NAs
+kiambu_land_sale_details$price_per_square_meter[kiambu_land_sale_details$price_per_square_meter=='']=NA
+
+# listing_date variable:
+
+# convert the variable to dates
+kiambu_land_sale_details$listing_date=dmy(kiambu_land_sale_details$listing_date
+                                          )
+
+```
+
+### Correcting data types
+```{r}
+# coerce label status to factor
+kiambu_land_sale_details$label_status=as.factor(kiambu_land_sale_details$label_status)
+
+# coerce label mandate type to factor
+kiambu_land_sale_details$label_mandate_type=as.factor(kiambu_land_sale_details$label_mandate_type)
+
+# coerce suburb to factor
+kiambu_land_sale_details$suburb=as.factor(kiambu_land_sale_details$suburb)
+
+# coerce town to factor
+kiambu_land_sale_details$town=as.factor(kiambu_land_sale_details$town)
+
+# coerce listing heading to character
+kiambu_land_sale_details$listing_heading=as.character(kiambu_land_sale_details$listing_heading)
+
+# coerce listing description to character
+kiambu_land_sale_details$listing_description=as.character(kiambu_land_sale_details$listing_description)
+
+# coerce area_per_square_meter to integer
+kiambu_land_sale_details$area_per_square_meter=as.integer(kiambu_land_sale_details$area_per_square_meter)
+
+# coerce listing_price_KES to integer
+kiambu_land_sale_details$listing_price_KES=as.integer(kiambu_land_sale_details$listing_price_KES)
+
+# coerce price_per_square_meter to integer
+kiambu_land_sale_details$price_per_square_meter=as.integer(kiambu_land_sale_details$price_per_square_meter)
+
+# glimpse internal structure
+glimpse(kiambu_land_sale_details)
+```
+
+# Reproducibility: Turn it into a function i.e a API
+We will combine everything into a function or an API for reproducibility.
+
+We have already figured out the process for requesting and parsing the kiambu land sale details, it's time to turn it into a function that does the same thing for any region.
+
+We will wrap everythig we have done into a function/API named get_land_sale_details().
+
+Then we will test out our API.
+
+```{r}
+
+get_land_sale_details <- function(region){
+  
+  #load the required libraries
+library(rvest)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(lubridate)
+
+###############################################################################
+  construct_url<-function(region){# function to construct the url
+    # construct the url
+    url <- paste(
+    "https://www.buyrentkenya.com/plots-land-for-sale", 
+    
+    # Include region
+    region, 
+    
+    sep = "/"
+  ) 
+    
+    # call get html content function
+    get_hmtl_content(url)
+  }# end function to construct the url
+###############################################################################
+  
+
+###############################################################################  
+  get_hmtl_content<-function(url){# function to get html content from the url
+  
+  # Get the html content
+  region_shamba_page=read_html(url)
+  
+  # call extract data frame function
+  extract_data_data_frame(region_shamba_page)
+    
+  } # end function to get html content
+###############################################################################
+
+
+###############################################################################
+  extract_data_data_frame<-function(region_shamba_page){# function to extract data
+    # Extract the listings data
+    result_card_elements <- html_nodes(x=region_shamba_page, css=".result-card")
+
+    
+    #Extract each element in details container element as text
+    # extract label_mandate_type
+    label_mandate_type<-html_text(html_node(x=result_card_elements, css=".label-mandate-type"))
+    
+    # extract label_status
+    label_status<-html_text(html_node(x=result_card_elements, css=".label-status"))
+    
+    # extract suburb_town
+    suburb_town<-html_text(html_node(x=result_card_elements, css=".suburb-town"))
+    
+    # extract category
+    category<-html_text(html_node(x=result_card_elements, css=".category"))
+    
+    # extract listing heading
+    listing_heading<-html_text(html_node(x=result_card_elements, css=".listing-heading"))
+    
+    #extract listing description
+    listing_description<-html_text(html_node(x=result_card_elements, css=".listing-description"))
+    
+    #extract area
+    area<-html_text(html_node(x=result_card_elements, css=".area-attribute"))
+    
+    # extract listing price
+    listing_price<-html_text(html_node(x=result_card_elements, css=".listing-price"))
+    
+    # extract price per square meter
+    price_per_square_meter<-html_text(html_node(x=result_card_elements, css=".perprice"))
+    
+    
+    # Extract agency name
+    
+    # uSING css selector agency-name returns a vector of length 20 with only two non NA representing Individual Listing. So lets explore another css selector
+    agency_name1<-html_text(html_node(x=result_card_elements, css=".agency-name"))
+    agency_name1
+    
+    # uSING html_attr() together with the css selector lazy for the logo returns a vector of length 18 with with the alt message of the image as the agency name. This css returns a majority of the names but skips two agency names. So lets find a away of correcting this.
+    alt_agency_name<-html_attr(html_nodes(x=result_card_elements, css=".lazy"), "alt")
+    alt_agency_name
+    
+    # We will create an empty vector and store into it the agency names as we traverse the 20 result-card_elements using the lazy css selector for the image. We assume that all result card elements have a logo image, and therefore in case any result card element does not have the logo image a NA will be returned as the agency name. So our resulting vector will be of length 20.
+    
+    # initialize an empty vector to store the agency names as we traverse result-card_elements
+    agency_name_vector=c()
+    
+    agencies<-function(result_card_elements){
+      for (i in result_card_elements){
+        
+      # Return the alt attribute of the logo. The alt attribute contains the agency name. If the result card element does not have a logo NA will be returned
+      agency_name<-html_attr(html_node(x=i, css=".lazy"), "alt")
+      
+      # merge the agency name with the agency name vector
+      agency_name_vector<-c(agency_name_vector, agency_name)
+    
+      
+      }# end for loop
+      
+      # return agency name vector
+      agency_name_vector
+      
+    }# end function
+    
+    # call the agencies vector and pass the result_card_elements. 
+    #It returns agency_name_vector populated with agency names
+    agency_name_vector=agencies(result_card_elements)
+    length(agency_name_vector)
+    
+    # View agency names
+    #View(agency_name_vector)
+    # We see that there are two NAs and we know pretty well that they represet "Individual Listing".
+    # So let us replace NAs with "Individual Listing"
+    
+    
+    # Replace NAs with "Individual Listing"
+    agency_name_vector=ifelse(is.na(agency_name_vector), "Individual Listing",agency_name_vector )
+    
+    # View to confirm NAs have been replace with "Individual Listing"
+    #View(agency_name_vector)
+    
+    #rename
+    agency_name<-agency_name_vector
+    
+    # extract the listing date
+    listing_date<-html_text(html_node(x=result_card_elements, css=".listing-date"))
+        
+    
+    
+    
+    
+    #Put these vectors together in a dataframe
+    region_land_sale_details<-data.frame(category, label_status, label_mandate_type, suburb_town,listing_heading,listing_description, area, listing_price, price_per_square_meter, agency_name, listing_date)
+
+
+    # call function clean_data_frame. Pass to it region_land_sale_details df
+    clean_data_frame(region_land_sale_details)
+  } # end of function to extract data
+###############################################################################
+  
+  
+###############################################################################
+  clean_data_frame<-function(region_land_sale_details){# function to clean data frame
+    
+# remove all leading and trailing white spaces in the entire data frame
+# the function below returns a matrix
+region_land_sale_details<- apply(region_land_sale_details,2,function(x)gsub('\\s+', '',x))
+
+#convert the resulting matrix back to a data frame
+region_land_sale_details<-as.data.frame(region_land_sale_details)
+
+#label_status variable:
+#Replace empty cells with NAs
+region_land_sale_details$label_status[region_land_sale_details$label_status=='']=NA
+
+#suburb_town variable: 
+#split this variable into two columns i.e suburb, town
+region_land_sale_details<-region_land_sale_details%>%
+  separate(suburb_town, c('suburb', 'town'), sep=",")
+
+#area variable:
+# Remove trailing m² pattern
+region_land_sale_details$area=str_replace_all(region_land_sale_details$area, "m²", "")
+
+# Remove commas
+region_land_sale_details$area=gsub(",", "", region_land_sale_details$area, fixed = TRUE)
+
+# Rename the area variable to area_per_square_meter
+names(region_land_sale_details)[names(region_land_sale_details) == 'area'] <- 'area_per_square_meter'
+
+#listing_price variable: 
+# Remove leading KES pattern
+region_land_sale_details$listing_price=str_replace_all(region_land_sale_details$listing_price, "KES","")
+
+# trim the left side to remove the resulting white space
+region_land_sale_details$listing_price=str_trim(region_land_sale_details$listing_price, 'left')
+
+#then remove all characters after the first white space
+region_land_sale_details$listing_price= gsub("\n.*","",region_land_sale_details$listing_price)
+
+# Remove commas
+region_land_sale_details$listing_price=gsub(",", "", region_land_sale_details$listing_price, fixed = TRUE)
+
+# Rename the listing_price variable to listing_price_KES
+names(region_land_sale_details)[names(region_land_sale_details) == 'listing_price'] <- 'listing_price_KES'
+
+# price_per_square_meter variable:
+# remove leading KES
+region_land_sale_details$price_per_square_meter=str_replace_all(region_land_sale_details$price_per_square_meter, "KES","")
+
+# remove trailing /m2
+region_land_sale_details$price_per_square_meter=str_replace_all(region_land_sale_details$price_per_square_meter, "/m2","")
+
+# Remove commas
+region_land_sale_details$price_per_square_meter=gsub(",", "", region_land_sale_details$price_per_square_meter, fixed = TRUE)
+
+#Replace empty cells with NAs
+region_land_sale_details$price_per_square_meter[region_land_sale_details$price_per_square_meter=='']=NA
+
+# listing_date variable:
+
+# convert the variable to dates
+region_land_sale_details$listing_date=dmy(region_land_sale_details$listing_date)
+    
+    
+    
+    
+    # rename region_land_sale_details to semi_clean_df
+    semi_clean_df=region_land_sale_details
+    
+    
+    # call the convert types fuction with the semi clean df
+    convert_types(semi_clean_df) 
+    
+  }#  end of function to clean data frame
+###############################################################################
+  
+  convert_types<-function(semi_clean_df){
+    
+  # coerce label status to factor
+semi_clean_df$label_status=as.factor(semi_clean_df$label_status)
+
+# coerce label mandate type to factor
+semi_clean_df$label_mandate_type=as.factor(semi_clean_df$label_mandate_type)
+
+# coerce suburb to factor
+semi_clean_df$suburb=as.factor(semi_clean_df$suburb)
+
+# coerce town to factor
+semi_clean_df$town=as.factor(semi_clean_df$town)
+
+# coerce listing heading to character
+semi_clean_df$listing_heading=as.character(semi_clean_df$listing_heading)
+
+# coerce listing description to character
+semi_clean_df$listing_description=as.character(semi_clean_df$listing_description)
+
+# coerce area_per_square_meter to integer
+semi_clean_df$area_per_square_meter=as.integer(semi_clean_df$area_per_square_meter)
+
+# coerce listing_price_KES to integer
+semi_clean_df$listing_price_KES=as.integer(semi_clean_df$listing_price_KES)
+
+# coerce price_per_square_meter to integer
+semi_clean_df$price_per_square_meter=as.integer(semi_clean_df$price_per_square_meter)
+    
+    
+    # rename semi_clean_df to clean_df
+    clean_df=semi_clean_df
+    
+    # return clean_df
+    clean_df
+  }
+###############################################################################
+  
+  # call function to costruct url
+  construct_url(region)
+  
+  
+  
+}# end of function get land sale details
+```
+
+Then we will test out our API.
+
+```{r}
+# Test get_land_sale_details with "nairobi"
+nairobi_land_sale_details=get_land_sale_details(region = "langata")
+
+nairobi_land_sale_details
+
+```
+
+
+Wow, great work! We have just built an API to scrape land sales details of the the different regions from buy rent kenya website.
