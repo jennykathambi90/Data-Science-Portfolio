@@ -80,6 +80,12 @@ library(caret)
 theme_set(theme_classic())
 ```
 
+# Load the data
+```{r}
+# Load the data
+data("Boston", package = "MASS")
+```
+
 # Diagnose whether a non-linear model is suitable
 Scatterplot of medv units versus lstat. We will add a smoothed line.
 
@@ -91,13 +97,10 @@ ggplot(Boston, aes(x = lstat, y = medv)) +
 
 The graph above shows a non-linearly decreasing relationship between medv and lstat variables, which is a good thing. So a non-linear model is ideal.
 
-# Load and Prepare the data
+# Prepare the data
 We'll randomly split the data into training set (80% for building a predictive model) and test set (20% for evaluating the model). Make sure to set seed for reproducibility.
 
 ```{r}
-# Load the data
-data("Boston", package = "MASS")
-
 # Split the data into training and test set
 set.seed(123)
 training.samples <- Boston$medv %>%
