@@ -1,5 +1,5 @@
 ---
-title: "Unsupervised Learning: Clustering"
+title: "Unsupervised Learning: Partitioning clustering"
 author: "Jane Kathambi"
 date: "18 July 2018"
 output: 
@@ -26,14 +26,110 @@ The most popular unsupervised learning methods, include:
     + hierarchical clustering and 
     + k-means clustering.
 
-# Principal component methods
-Principal component methods allows us to summarize and visualize the most important information contained in a multivariate data set.
+# Cluster analysis
+Cluster analysis is used to identify groups of similar objects in a multivariate data sets collected from fields such as marketing, bio-medical and geo-spatial. 
 
-The type of principal component methods to use depends on *variable types* contained in the data set. These methods include:
+There are different types of clustering methods, including:
 
-* *Principal Component Analysis (PCA)*, which is one of the most popular multivariate analysis method. The goal of PCA is to summarize the information contained in a *continuous (i.e, quantitative) multivariate data* by reducing the dimensionality of the data without loosing important information.
+* Partitioning clustering: Subdivides the data into a set of k groups.
+* Hierarchical clustering: Identify groups in the data without subdividing it.
 
-* *Correspondence Analysis (CA)*, which is an extension of the principal component analysis for analyzing *a large contingency table formed by two qualitative variables (or categorical data)*.
+*Distance measures*
+The classification of observations into groups requires some methods for computing the distance or the (dis)similarity between each pair of observations. The result of this computation is known as a dissimilarity or distance matrix. There are different methods for measuring distances, including:
 
-* *Multiple Correspondence Analysis (MCA)*, which is an adaptation of CA to *a data table containing more than two categorical variables*.
+* Euclidean distance
+* Correlation based-distance
+
+*What type of distance measures should we choose?* The choice of distance measures is very important, as it has a strong influence on the clustering results. For most common clustering software, the default distance measure is the Euclidean distance.
+
+Depending on the type of the data and the researcher questions, other dissimilarity measures might be preferred.
+
+* If we want to identify clusters of observations with the *same overall profiles* regardless of their magnitudes, then we should go with *correlation-based distance* as a dissimilarity measure. 
+
+    + This is particularly the case in gene expression data analysis, where we might want to consider genes similar when they are up and down together. 
+    
+    + It is also the case, in marketing if we want to identify group of shoppers with the same preference in term of items, regardless of the volume of items they bought.
+    
+* If *Euclidean distance* is chosen, then observations with *high values of features* will be clustered together. The same holds true for observations with *low values of features*.
+
+*Data standardization*
+Before cluster analysis, it is recommended to scale (or normalize) the data, to make the variables comparable. This is particularly recommended when variables are measured in different scales (e.g: kilograms, kilometers, centimeters, …); otherwise, the dissimilarity measures obtained will be severely affected. 
+
+R function for scaling the data: scale(), applies scaling on the column of the data (variables).
+
+#Partitioning clustering
+Partitioning algorithms are clustering techniques that subdivide the data sets into a set of k groups, where k is the number of groups pre-specified by the analyst.
+
+There are different types of partitioning clustering methods. The most popular is the K-means clustering, in which, each cluster is represented by the center or means of the data points belonging to the cluster. The K-means method is sensitive to outliers.
+
+An alternative to k-means clustering is the K-medoids clustering or PAM (Partitioning Around Medoids), which is less sensitive to outliers compared to k-means.
+
+In this study we will determine the optimal number of clusters and how to compute k-means and PAM(K-medoids l9787hui) clustering in R.
+
+# The USA arrests dataset
+This data set contains statistics, in arrests per 100,000 residents for assault, murder, and rape in each of the 50 US states in 1973. Also given is the percent of the population living in urban areas.
+
+#Loading required R packages
+* cluster for cluster analysis.
+* factoextra for cluster visualization.
+```{r}
+library(cluster)
+library(factoextra)
+```
+
+# load the data
+We will use the demo data set USArrests.
+```{r}
+data("USArrests")
+```
+
+# Data preparation
+We start by standardizing the data:
+```{r}
+mydata <- scale(USArrests)
+```
+
+# Determining the optimal number of clusters
+
+use factoextra::fviz_nbclust()
+```{r}
+fviz_nbclust(mydata, kmeans, method = "gap_stat")
+```
+Suggested number of cluster: 3
+
+# Compute k-means clustering
+```{r}
+# for reproducibility
+set.seed(123)
+
+#compute kmeans clustering
+km.res <- kmeans(mydata, 3, nstart = 25)
+
+```
+
+# visualize k-means clustering
+```{r}
+# Visualize k-means clustering
+fviz_cluster(km.res, data = mydata, palette = "jco",
+             ggtheme = theme_minimal())
+```
+
+# Compute k-medoids/pam clustering
+```{r}
+# for reproducibility
+set.seed(123)
+
+#compute k-medoids/pam clustering
+pam.res <- pam(mydata, 3)
+
+```
+
+# visualize k-medoids/pam clustering
+```{r}
+# Visualize k-medoids/pam clustering
+fviz_cluster(pam.res)
+```
+
+
+
 
