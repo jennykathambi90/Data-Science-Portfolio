@@ -1,0 +1,491 @@
+---
+title: "Unsupervised Learning: PCA"
+author: "Jane Kathambi"
+date: "18 July 2018"
+output: 
+  html_document:
+    keep_md: yes
+    number_sections: yes
+    theme: united
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+# Introduction
+Unsupervised learning refers to a set of statistical techniques for exploring and discovering knowledge, from a multivariate data, without building a predictive models.
+
+It makes it possible to visualize the relationship between variables, as well as, to identify groups of similar individuals (or observations).
+
+The most popular unsupervised learning methods, include:
+
+* Principal component methods, which consist of summarizing and visualizing the most important information contained in a multivariate data set.
+
+* Cluster analysis for identifying groups of observations with similar profile according to a specific criteria. These techniques include: 
+    + hierarchical clustering and 
+    + k-means clustering.
+
+In this study we will explore principal component analysis and practical examples in R for visualizing multivariate data sets. We'll show how to reveal the most important variables that explain the variations in a data set.
+
+# Principal component methods
+Principal component methods allows us to summarize and visualize the most important information contained in a multivariate data set. 
+
+The type of principal component methods to use depends on *variable types* contained in the data set. These methods include:
+
+* *Principal Component Analysis (PCA)*, which is one of the most popular multivariate analysis method. The goal of PCA is to summarize the information contained in a *continuous (i.e, quantitative) multivariate data* by reducing the dimensionality of the data without loosing important information.
+
+* *Correspondence Analysis (CA)*, which is an extension of the principal component analysis for analyzing *a large contingency table formed by two qualitative variables (or categorical data)*.
+
+* *Multiple Correspondence Analysis (MCA)*, which is an adaptation of CA to *a data table containing more than two categorical variables*.
+
+* *FAMD - Factor Analysis of Mixed Data*, for analyzing a data set containing both quantitative and qualitative variables.
+
+* *MFA - Multiple Factor Analysis*, for analyzing a data set containing variables structured into groups.
+
+PCA reduces the data into few new dimensions (or axes), which are a linear combination of the original variables. You can visualize a multivariate data by drawing a scatter plot of the first two dimensions i.e principal components, which contain the most important information in the data.
+
+Principal component analysis (PCA) allows us to summarize and to visualize the information in a data set containing individuals/observations described by multiple inter-correlated quantitative variables. Each variable could be considered as a different dimension. If you have more than 3 variables in your data sets, it could be very difficult to visualize a multi-dimensional hyperspace.
+
+Principal component analysis is used to extract the important information from a multivariate data table and to express this information as a set of few new variables called principal components. These new variables correspond to a linear combination of the originals. The number of principal components is less than or equal to the number of original variables.
+
+The information in a given data set corresponds to the total variation it contains. The goal of PCA is to identify directions (or principal components) along which the variation in the data is maximal.
+
+In other words, PCA reduces the dimensionality of a multivariate data to two or three principal components, that can be visualized graphically, with minimal loss of information.
+
+Note that, the PCA method is particularly useful when the variables within the data set are highly correlated. Correlation indicates that there is redundancy in the data. Due to this redundancy, PCA can be used to reduce the original variables into a smaller number of new variables ( = principal components) explaining most of the variance in the original variables.
+
+Taken together, the main purpose of principal component analysis is to:
+
+* identify hidden pattern in a data set,
+* reduce the dimensionnality of the data by removing the noise and redundancy in the data,
+* identify correlated variables
+
+# The USA arrests dataset
+This data set contains statistics, in arrests per 100,000 residents for assault, murder, and rape in each of the 50 US states in 1973. Also given is the percent of the population living in urban areas.
+
+#Loading required R packages
+* FactoMineR for computing principal component methods
+* factoextra for visualizing the output of FactoMineR (an extension to ggplot2)
+
+```{r}
+library(FactoMineR)
+library(factoextra)
+```
+
+# load the data
+We will use the demo data set USArrests.
+```{r}
+data("USArrests")
+```
+
+# Data standardization
+Note that, by default, the function PCA() [in FactoMineR], standardizes the data automatically during the PCA; so you don't need do this transformation before the PCA.
+
+This is particularly recommended when variables are measured in different scales (e.g: kilograms, kilometers, centimeters, .); otherwise, the PCA outputs obtained will be severely affected.
+
+The goal is to avoid some variables to become dominant just because of their large measurement units. It makes variable comparable.
+
+# Compute PCA
+The function PCA() [FactoMineR package] can be used as follows :
+
+PCA(X, scale.unit = TRUE, ncp = 5, graph = TRUE)
+
+As you can see standardization is set to TRUE by default.
+
+* X: a data frame. Rows are individuals and columns are numeric variables
+* scale.unit: a logical value. If TRUE, the data are scaled to unit variance before the analysis. This standardization to the same scale avoids some variables to become dominant just because of their large measurement units. It makes variable comparable.
+* ncp: number of dimensions kept in the final results.
+* graph: a logical value. If TRUE a graph is displayed.
+
+```{r}
+# for reproducibility
+set.seed(123)
+
+#compute PCA
+res.pca <- PCA(USArrests, graph = FALSE)
+
+```
+
+# out put the results of pca() function
+The output of the function PCA() is a list.
+```{r}
+# Print the results of the PCA fuction
+res.pca
+```
+
+# Visualization and Interpretation
+
+We'll use the factoextra R package to help in the interpretation of PCA. We will extract and visualize the results of PCA using factoextra functions which include:
+
+* get_eigenvalue(res.pca): Extract the eigenvalues/variances of principal components
+* fviz_eig(res.pca): Visualize the eigenvalues
+
+* get_pca_ind(res.pca), get_pca_var(res.pca): Extract the results for individuals and variables, respectively.
+
+* fviz_pca_ind(res.pca), fviz_pca_var(res.pca): Visualize the results individuals and variables, respectively.
+
+* fviz_pca_biplot(res.pca): Make a biplot of individuals and variables.
+
+
+##  Eigenvalues/Variances 
+### Extract Eigenvalues/Variances 
+
+That is the percentage of variation (or information), in the data, explained by each principal component.
+
+In simple terms eigenvalues measure the amount of variation retained by each principal component. 
+
+Eigenvalues are large for the first PCs and small for the subsequent PCs. That is, the first PCs corresponds to the directions with the maximum amount of variation in the data set.
+
+Why examine the eigenvalues?
+* To determine the number of principal components to be considered. 
+
+The eigenvalues and the proportion of variances (i.e., information) retained by the principal components (PCs) can be extracted using the function get_eigenvalue() [factoextra package].
+
+
+
+```{r}
+# Extract eigenvalues i.e the percentage of variation (or information), in the data, explained by each principal component
+eig.val <- get_eigenvalue(res.pca)
+eig.val
+```
+Interpratation:
+
+* Varaince.percent: 62% of variance is explained by the first PC.
+* cumulative.variance.percent: 86 % of variance is explained by the first two PCs.
+* Eigenvalues can be used to determine the number of principal components to retain after PCA:
+
+    + An eigenvalue > 1 indicates that PCs account for more variance than accounted by one of the original variables in standardized data. This is commonly used as a cutoff point for which PCs are retained. This holds true only when the data are standardized.
+
+You can also limit the number of component to that number that accounts for a certain fraction of the total variance. For example, if you are satisfied with 80% of the total variance explained then use the number of components to achieve that.
+
+Unfortunately, there is no well-accepted objective way to decide how many principal components are enough. This will depend on the specific field of application and the specific data set. In practice, we tend to look at the first few principal components in order to find interesting patterns in the data.
+
+In our analysis, the first two principal components explain 80% of the variation. This is an acceptably large percentage.
+
+An alternative method to determine the number of principal components is to look at a Scree Plot, which is the plot of eigenvalues ordered from largest to the smallest. The number of component is determined at the point, beyond which the remaining eigenvalues are all relatively small and of comparable size.
+
+The scree plot can be produced using the function fviz_eig() or fviz_screeplot() [factoextra package].
+
+### Visualize Eigenvalues/Variances
+```{r}
+fviz_eig(res.pca, addlabels = TRUE)
+```
+
+From the plot above, we might want to stop at the third principal component. 95% of the information (variances) contained in the data are retained by the first three principal components.
+
+## Variables
+### Extract Variables
+Use the function get_pca_var() to extract the results, for variables, from a PCA output.
+
+```{r}
+var <- get_pca_var(res.pca)
+var
+```
+
+
+This function provides a list of matrices containing all the results for the active variables i.e variables used in computing PCA.The results of these active variables are shown below alongside an explanation of how they can be used in the plot of variables:
+
+* coordinates for the variables
+    + These are used to create a scatter plot.
+    
+* correlation between variables and axes(dimensions on PCs)
+    + 
+
+* squared cosine for the variables
+    + represents the quality of representation for variables on the factor map.
+    
+* contributions of the variables
+    +  contains the contributions (in percentage) of the variables to the principal components. The contribution of a variable (var) to a given principal component is (in percentage).
+    
+The different components can be accessed as follow:
+```{r}
+# Coordinates
+var$coord
+# Cos2: quality on the factore map
+var$cos2
+# Contributions to the principal components
+var$contrib
+```
+
+
+### Visualize variables
+In this section, we describe how to visualize variables and draw conclusions about their correlations. 
+
+Next, we highlight variables according to either:
+
+1. their quality of representation on the factor map or 
+2. their contributions to the principal components.
+
+
+#### Correlation circle
+The correlation between a variable and a principal component (PC) is used as the coordinates of the variable on the PC. 
+
+The representation of variables differs from the plot of the observations: The observations are represented by their projections, but the variables are represented by their correlations.
+
+```{r}
+fviz_pca_var(res.pca, col.var = "black")
+```
+The plot above is also known as variable correlation plots. It shows the relationships between all variables. It can be interpreted as follow:
+
+* Positively correlated variables are grouped together.
+* Negatively correlated variables are positioned on opposite sides of the plot origin (opposed quadrants).
+* The distance between variables and the origin measures the quality of the variables on the factor map. Variables that are away from the origin are well represented on the factor map.
+
+#### Quality of representation i.e cos2 (square cosine, squared coordinates)
+The quality of representation of the variables on factor map is called cos2 (square cosine, squared coordinates) . You can access to the cos2 as follow:
+
+```{r}
+var$cos2
+```
+
+You can visualize the cos2 of variables on all the dimensions using the corrplot package:
+
+```{r}
+library("corrplot")
+corrplot(var$cos2, is.corr=FALSE)
+```
+
+It's also possible to create a bar plot of variables cos2 using the function fviz_cos2().
+
+```{r}
+# Total cos2 of variables on Dim.1 and Dim.2
+fviz_cos2(res.pca, choice = "var", axes = 1:2)
+```
+
+Note that,
+
+* A high cos2 indicates a good representation of the variable on the principal component. In this case the variable is positioned close to the circumference of the correlation circle.
+
+* A low cos2 indicates that the variable is not perfectly represented by the PCs. In this case the variable is close to the center of the circle.
+
+For a given variable, the sum of the cos2 on all the principal components is equal to one.
+
+If a variable is perfectly represented by only two principal components (Dim.1 & Dim.2), the sum of the cos2 on these two PCs is equal to one. In this case the variables will be positioned on the circle of correlations.
+
+For some of the variables, more than 2 components might be required to perfectly represent the data. In this case the variables are positioned inside the circle of correlations.
+
+In summary:
+
+* The cos2 values are used to estimate the quality of the representation
+* The closer a variable is to the circle of correlations, the better its representation on the factor map (and the more important it is to interpret these components)
+* Variables that are closed to the center of the plot are less important for the first components.
+
+It's possible to color variables by their cos2 values using the argument col.var = "cos2". This produces a gradient colors. In this case, the argument gradient.cols can be used to provide a custom color. For instance, gradient.cols = c("white", "blue", "red") means that:
+
+* variables with low cos2 values will be colored in "white"
+* variables with mid cos2 values will be colored in "blue"
+* variables with high cos2 values will be colored in red
+
+```{r}
+# Color by cos2 values: quality on the factor map
+fviz_pca_var(res.pca, col.var = "cos2",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+             repel = TRUE # Avoid text overlapping
+             )
+```
+
+Note that, it's also possible to change the transparency of the variables according to their cos2 values using the option alpha.var = "cos2". For example, type this:
+
+```{r}
+fviz_pca_var(res.pca, alpha.var = "cos2",
+             repel = TRUE # Avoid text overlapping
+             )
+```
+
+#### Contributions of variables to PCs
+The contributions of variables in accounting for the variability in a given principal component are expressed in percentage.
+
+Variables that are correlated with PC1 (i.e., Dim.1) and PC2 (i.e., Dim.2) are the most important in explaining the variability in the data set.
+
+Variables that are not correlated with any PC or correlated with the last dimensions are variables with low contribution and might be removed to simplify the overall analysis.
+
+The contribution of variables can be extracted as follow :
+
+```{r}
+var$contrib
+```
+
+The larger the value of the contribution, the more the variable contributes to the component.
+
+It's possible to use the function corrplot() [corrplot package] to highlight the most contributing variables for each dimension:
+```{r}
+library("corrplot")
+corrplot(var$contrib, is.corr=FALSE)  
+```
+
+The function fviz_contrib() [factoextra package] can be used to draw a bar plot of variable contributions. If your data contains many variables, you can decide to show only the top contributing variables. However in this study we only have four variables, maybe we can show the top 3 variables contributing to the principal components:
+
+```{r}
+# Contributions of variables to PC1
+fviz_contrib(res.pca, choice = "var", axes = 1, top = 4)
+
+# Contributions of variables to PC2
+fviz_contrib(res.pca, choice = "var", axes = 2, top = 4)
+```
+
+The total contribution to PC1 and PC2 is obtained with the following R code:
+```{r}
+fviz_contrib(res.pca, choice = "var", axes = 1:2, top = 4)
+```
+
+The red dashed line on the graph above indicates the expected average contribution.
+
+For a given component, a variable with a contribution larger than this cutoff could be considered as important in contributing to the component.
+ 
+It can be seen that the variables - UrbanPop, Murder and Assault - contribute the most to the dimensions 1 and 2.
+
+The most important (or, contributing) variables can be highlighted on the correlation plot as follow:
+
+```{r}
+fviz_pca_var(res.pca, col.var = "contrib",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07")
+             )
+```
+
+Note that, it's also possible to change the transparency of variables according to their contrib values using the option alpha.var = "contrib". For example, type this:
+
+```{r}
+# Change the transparency by contrib values
+fviz_pca_var(res.pca, alpha.var = "contrib")
+```
+
+*Color by groups*
+It's also possible to change the color of variables by groups defined by a qualitative/categorical variable, also called factor in R terminology.
+
+As we don't have any grouping variable in our data sets for classifying variables, we'll create it.
+
+In the following demo example, we start by classifying the variables into 3 groups using the kmeans clustering algorithm. Next, we use the clusters returned by the kmeans algorithm to color variables.
+
+```{r}
+# Create a grouping variable using kmeans
+# Create 3 groups of variables (centers = 3)
+set.seed(123)
+res.km <- kmeans(var$coord, centers = 3, nstart = 25)
+grp <- as.factor(res.km$cluster)
+# Color variables by groups
+fviz_pca_var(res.pca, col.var = grp, 
+             palette = c("#0073C2FF", "#EFC000FF", "#868686FF"),
+             legend.title = "Cluster")
+```
+
+Note that, to change the color of groups the argument palette should be used. To change gradient colors, the argument gradient.cols should be used.
+
+NB: Pallete is used with categorical variables i.e discrete variables.
+Gradient is used with continuous variables.
+
+#### Dimension description
+We have already described how to highlight variables according to their contributions to the principal components.
+
+Note also that, the function dimdesc() [in FactoMineR], for dimension description, can be used to identify the most significantly associated variables with a given principal component . It shows the P-values of each variable in relation to each dimension
+
+```{r}
+res.desc <- dimdesc(res.pca, axes = c(1,2), proba = 0.05)
+
+# Description of dimension 1
+res.desc$Dim.1
+
+# Description of dimension 2
+res.desc$Dim.2
+
+# Description of both dimensions
+res.desc
+```
+In the output above, $quanti means results for quantitative variables. Note that, variables are sorted by the p-value of the correlation.
+
+## Graph of individuals
+Individuals here means observations.
+
+The results, for individuals can be extracted using the function get_pca_ind() [factoextra package]. 
+
+Similarly to the get_pca_var(), the function get_pca_ind() provides a list of matrices containing all the results for the individuals (coordinates, correlation between individuals and axes, squared cosine and contributions)
+
+```{r}
+ind <- get_pca_ind(res.pca)
+ind
+```
+To get access to the different components, use this:
+```{r}
+# Coordinates of individuals
+head(ind$coord)
+# Quality of individuals
+head(ind$cos2)
+# Contributions of individuals
+head(ind$contrib)
+```
+
+### Plots: quality and contribution
+The fviz_pca_ind() is used to produce the graph of individuals. To create a simple plot, type this:
+
+```{r}
+fviz_pca_ind(res.pca)
+```
+
+Like variables, it's also possible to color individuals by their cos2 values:
+
+```{r}
+fviz_pca_ind(res.pca, col.ind = "cos2", 
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE # Avoid text overlapping (slow if many points)
+             )
+```
+
+Note that, individuals that are similar are grouped together on the plot.
+
+You can also change the point size according the cos2 of the corresponding individuals:
+```{r}
+fviz_pca_ind(res.pca, pointsize = "cos2", 
+             pointshape = 21, fill = "#E7B800",
+             repel = TRUE # Avoid text overlapping (slow if many points)
+             )
+```
+
+### a bar plot of the quality of representation (cos2)
+To create a bar plot of the quality of representation (cos2) of individuals on the factor map, you can use the function fviz_cos2() as previously described for variables:
+```{r}
+fviz_cos2(res.pca, choice = "ind")
+```
+
+### cotributions 
+To visualize the contribution of individuals to the first two principal components, type this:
+```{r}
+# Total contribution on PC1 and PC2
+fviz_contrib(res.pca, choice = "ind", axes = 1:2)
+```
+
+## Biplot
+To make a simple biplot of individuals and variables, type this:
+
+```{r}
+bi_plot<-fviz_pca_biplot(res.pca, repel = TRUE,
+                col.var = "#2E9FDF", # Variables color
+                col.ind = "#696969"  # Individuals color
+                )
+```
+
+### Graphical parameters
+To change easily the graphical of any ggplots, you can use the function ggpar() [ggpubr package]
+
+The graphical parameters that can be changed using ggpar() include:
+
+* Main titles, axis labels and legend titles
+* Legend position. Possible values: "top", "bottom", "left", "right", "none".
+* Color palette.
+* Themes. Allowed values include: theme_gray(), theme_bw(), theme_minimal(), theme_classic(), theme_void().
+
+```{r}
+ggpubr::ggpar(bi_plot,
+              title = "PCA-Biplot",
+              subtitle = "UsArrests data set",
+              caption = "Source: factoextra"
+              )
+```
+
+Note that, the biplot might be only useful when there is a low number of variables and individuals in the data set; otherwise the final plot would be unreadable.
+
+Note also that, the coordinate of individuals and variables are not constructed on the same space. Therefore, in the biplot, you should mainly focus on the direction of variables but not on their absolute positions on the plot.
+
+Roughly speaking a biplot can be interpreted as follow:
+
+* an individual that is on the same side of a given variable has a high value for this variable;
+* an individual that is on the opposite side of a given variable has a low value for this variable.
