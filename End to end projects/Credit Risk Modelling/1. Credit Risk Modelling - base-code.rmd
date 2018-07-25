@@ -542,10 +542,12 @@ glmnetLogisticRegProbs <- predict(object=glmnetLogisticRegFit, test.predictors, 
 
 #performance AUC
 colAUC(glmnetLogisticRegProbs, test.response)
+
 ```
 Our model has an accuracy of 76.8%, kappa of 36.54%. Based on these two parameters this model has an average performance.
 
 The AUC of Predictions with test data is telling us that our model has a 77.59% AUC score (remember that an AUC ranges between 0.5 and 1, where 0.5 is random and 1 is perfect).
+
 # Gradient Boosting Machine Fit
 
 ## fit gbm
@@ -752,7 +754,7 @@ data.frame(aucSvmRadial=aucSvmRadial[1], aucFda=aucFda[1], aucLogitBoost=aucLogi
 
 Ranking the models based on predicted AUC starting with the best performing model:
 
-1. Glmnet Logistic Regression              --> Predicted AUC=0.7759238
+1. Glmnet Logistic Regression       --> Predicted AUC=0.7759238
 2. Random Forest                    --> Predicted AUC=0.7705524
 3. Gradient Boosting Machine        --> Predicted AUC=0.7684571
 4. Radil kernel SVM                 --> Predicted AUC=0.7599238
@@ -760,9 +762,7 @@ Ranking the models based on predicted AUC starting with the best performing mode
 6. Boosted Logistic Regression      --> Predicted AUC=0.7190476
 7. Decision Tree                    --> Predicted AUC=0.7130286
 
-
 The glmnet logistic regression is doing well probably because it has generalized its fuction well due to important feature selection.
 
 In the next study we will tune the models further and reduce model complexity by reducig irrelevant features and correlated features. 
-
 
