@@ -1,0 +1,764 @@
+---
+title: "Credit Risk Modelling"
+author: "Jane Kathambi"
+date: "20 July 2018"
+output: 
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+    toc_depth: 6
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+
+# Introduction
+We will use real-life credit data to explore how to model credit risk by using logistic regression and decision trees in R.
+
+Modeling credit risk for both personal and company loans is of major importance for banks. The probability that a debtor will default is a key component in getting to a measure for credit risk. 
+
+While other models are used for credit risk modelling, logistic regression and decision trees are the ones that are often used. 
+
+We will use them alongside other models in this particular context.
+
+# Credit Data 
+We will use the German credit dataset. The data contains data on 20 variables and the classification whether an applicant is considered a Good or a Bad credit risk for 1000 loan applicants.
+
+# Load the required libraries
+
+* caret: for machine learning
+* gmodels package: Contains the CrossTable() function
+* tidyverse: For data mangling and visualization.
+* caTools: is to score the models using a Receiver Operating Characteristic (ROC) curve.
+```{r}
+library(gmodels)
+library(tidyverse)
+library(caret)
+library(caTools)
+```
+
+# Load the credit data
+```{r}
+loan_data<-read.table('data/german.data.txt')
+```
+
+# Data exploration and Preprocessing
+
+## The strucutre and summary of the data
+We will view the structure of the data set to get familiar with it, we will use glimpse a function of the dplyr package.
+```{r}
+# View the structure of loan_data
+#glimpse(loan_data)
+
+```
+
+## Change varaible names
+The variables names don't represent the true meaning of the data, so let us change the variable names as follows:
+```{r}
+# assign the data new column names
+colnames(loan_data) <- c( 'account_balance', 
+                    'months_loan_duration', 
+                    'credit_history', 
+                    'purpose', 
+                    'credit_amount', 
+                    'savings_balance', 
+                    'employment_status', 
+                    'installment_rate', 
+                    'personal_status', 
+                    'other_debtors_guarantors', 
+                    'present_residence_years',  
+                    'property', 
+                    'age', 
+                    'other_installment', 
+                    'housing', 
+                    'number_credits_this_bank', 
+                    'job', 
+                    'number_dependents', 
+                    'phone', 
+                    'foreign_worker', 
+                     'default')
+
+# View the structure of loan_data to comfirm new col names
+#glimpse(loan_data)
+```
+
+## Fix factor variables
+We have to fix the factor variables as most models only accept numeric data. In a nutshell, dummifying factors breaks all the unique values into separate columns.
+```{r}
+#dummyfy factor variables
+loan_data_dummy <- dummyVars("~.",data=loan_data, fullRank=F)
+loan_data <- as.data.frame(predict(loan_data_dummy, loan_data))
+
+# show names of new variables
+#print(names(loan_data))
+
+#view the structure of the new data frame
+#glimpse(loan_data)
+```
+
+## Response variable coding
+
+As this is a binary classification, we need to force models into using the classification mode. We do this by changing the outcome variable to a factor.
+```{r}
+#How the default variabel is coded. 
+# results show that defaults are coded as 2, and non-defaults as 1
+table(loan_data$default)
+
+# Change the levels 
+loan_data$default <- ifelse(loan_data$default==2,'def','non_def')
+
+# coarse default to factor
+loan_data$default <- as.factor(loan_data$default)
+
+#confirm levels have changed
+levels(loan_data$default)
+
+```
+
+Default is coded as 2 while non-default 1.
+
+We would like to add levels (def, non_def) that depict the meaning of the variable as we have done above.
+
+## Exploring the credit data (default rates, outliers, missing values).
+
+### Default rates
+
+After being given loan_data, you are particularly interested about the defaulted loans in the data set. You want to get an idea of the number, and percentage of defaults. Defaults are rare, so you always want to check what the proportion of defaults is in a loan dataset. 
+
+To learn more about variable structures and spot unexpected tendencies in the data, you should examine the relationship between default variable and certain factor variables. 
+
+*What is the proportion of defaults in the data?*
+
+In order for the model to be able to make accurate forecasts it needs to see enough examples of what constitutes a default. For this reason it is important that there is a sufficiently large number of defaults in the data. Typically in practice, data with less than 5% of defaults pose strong modelling challenges.
+
+1. Have a look at the CrossTable() of loan status, using just one argument: loan_data$default.
+
+
+```{r}
+
+# Call CrossTable() on loan_status
+CrossTable(loan_data$default, prop.r=TRUE, prop.c=FALSE, prop.t=FALSE, prop.chisq=FALSE)
+```
+
+Our data has 30% defaults. So this data is good for modelling.
+
+2. Call CrossTable() with x argument installment_rate and y argument default. We only want row-wise proportions, so set prop.r to TRUE, but prop.c , prop.t and prop.chisq to FALSE (default values here are TRUE, and this would lead to inclusion of column proportions, table proportions and chi-square contributions for each cell. We do not need these here.) We expect high installment rates to be associated with high default rates. Let us eplore the data to see if this hypothesis holds true.
+
+```{r}
+# Call CrossTable() on grade and loan_status
+CrossTable(loan_data$installment_rate , loan_data$default, prop.r=TRUE, prop.c=FALSE, prop.t=FALSE, prop.chisq=FALSE)
+
+```
+
+As you can see the proportion of defaults increase when the installment rate increase.
+
+### Missing values
+```{r}
+anyNA(loan_data)
+```
+
+There are no missing values
+
+### Oultiers
+
+Lets explore some continous variable to detect outliers:
+1. credit_amount
+2. installment_rate
+3. present_residence_years
+4. age
+5. number_credits_this_bank
+6. number_dependents
+7. months_loan_duration
+
+We will use boxplots
+```{r}
+attach(loan_data)
+
+par(mfrow=c(1,1))
+boxplot(age)
+hist(age)
+
+```
+
+There are no outliers in this data set.
+
+## split data into training set and test set
+```{r}
+seed=107
+
+set.seed(seed)
+
+inTrain <- createDataPartition(
+  
+  ## the outcome data are needed
+  y = loan_data$default,
+  
+  ## The percentage of data in the training set
+  p = .75,
+
+  list = FALSE
+)
+
+train.data <- loan_data[ inTrain,]
+train.predictors<-train.data[,1:61]
+train.response<-train.data$default
+
+test.data <- loan_data[-inTrain,]
+test.predictors<-test.data[, 1:61]
+test.response<-test.data$default
+
+```
+
+
+# Exploring the classes to inform models to choose
+
+We will seek to know if the classes are separable or not
+
+```{r}
+ggplot(loan_data, aes(x = age, y = credit_amount, col=default)) +
+  geom_point() 
+
+```
+
+
+From the above scatter plot it is evident that there are two classes and they are inseparable. So we can fi the following models:
+1. Radial Kernel Svm
+2. Fda
+3. LogitBOost
+4. Logistic regression
+5. Gbm
+6. Random forest
+7. Decision tree
+
+
+We will evaluate their efficiency based on AUC (Area Under ROC).
+
+Finally we will propose the best model which shows the best efficiency on the test set data.
+
+# Configure parallel processing
+Parallel processing in caret can be accomplished with the parallel and doParallel packages. The following code loads the required libraries (note, these libraries also depend on the iterators and foreach libraries).
+
+```{r}
+#Include the parallel library. 
+library(parallel)
+
+#Include the doParallel library. 
+library(doParallel)
+
+# Use the detectCores() function to find the number of cores in system
+no_cores <- detectCores()-1 # convention to leave 1 core for OS
+ 
+# Setup cluster
+clust <- makeCluster(no_cores) 
+
+
+```
+
+
+# Radial Kernel SVM
+
+It is important to know what type of modeling a particular model supports. This can be done using the caret function getModelInfo:
+```{r}
+getModelInfo()$svmRadial$type
+```
+
+Radial Kernel SVM supports Regression and Classification. Since our response varaible is factor classification will be preformed.
+
+## Train control
+Caret offers many tuning functions to help you get as much as possible out of your models; the *trainControl* function allows you to control the resampling of your data. 
+
+This will split the training data set internally and do it's own train/test runs to figure out the best settings for your model. 
+
+In this case, we're going to use repeated cross-validation repeating 3 times,in order to tume/find optimal tuning parameters for using in the final model.For radial kernel svm the tuning parameters are:
+
+1. *C*, 
+2. *sigma*. 
+
+You can also set these values yourself if you don't trust the function.
+
+```{r}
+set.seed(seed)
+
+train_ctrl <- trainControl(
+  method = "repeatedcv", 
+  repeats = 3,
+  returnResamp = "all",
+  summaryFunction = twoClassSummary,#(ROC, Sensitivity, Specificity). Used for twoClass-problems
+  
+  classProbs = TRUE, #Since the ROC curve is based on the predicted class probabilities (which are not computed automatically)
+  
+  allowParallel = TRUE # allow paralellel processing
+)
+```
+
+## Fit radial kernel svm
+Let us teach our model how to recognize loan defaulters. Because this is a classification model, we're requesting that our metrics use ROC instead of the default RMSE:
+
+```{r}
+set.seed(seed)
+
+x<-train.predictors # predictors
+y<-train.response # response
+
+svmRadialFit <- train(x, y, 
+                  method='svmRadial', 
+                  trControl=train_ctrl, 
+                  metric = "ROC",
+                  tuneLength = 5,
+                  preProc = c("center", "scale")
+                )
+
+
+```
+
+## Output svmRadialFit
+
+```{r}
+svmRadialFit
+```
+
+## Output the tuned parameters for svmRadialFit
+```{r}
+svmRadialFit$bestTune
+```
+
+## Output the best model
+
+```{r}
+# View final model
+svmRadialFit$finalModel
+```
+
+## Plot svmRadialFit
+```{r}
+ggplot(svmRadialFit, metric = "ROC")
+```
+
+## Which parameters were most important?
+We then can call predictors() function on our model to find out which variables were most important:
+
+```{r}
+# most important variables
+predictors(svmRadialFit)
+
+```
+
+## Obtain predicted probabilities and classes of test data
+There are two types of evaluation we can do here, *raw* or *prob*. 
+
+Raw gives you a class prediction, in our case default and non_default, while prob gives you the probability on how sure the model is about it's choice. 
+
+Accuracy requires using classes.
+
+I always use prob, as I like to be in control of the threshold and also like to use AUC score which requires probabilities, not classes. 
+
+There are situations where having class values can come in handy, such as with multinomial models where you're predicting more than two values.
+
+We now call the predict function and pass it our trained model and our testing data. Let's start by looking at class predictions
+
+
+```{r}
+# Classes
+svmRadialClasses <- predict(object=svmRadialFit, test.predictors, type='raw')
+
+#performance accuracy
+confusionMatrix(data=svmRadialClasses, test.response)
+
+#Probabilities
+svmRadialProbs <- predict(object=svmRadialFit, test.predictors, type='prob')
+
+# Performance Auc
+colAUC(svmRadialProbs, test.response)
+
+```
+Our model has an accuracy of 74%, kappa of 35.39%. This model has an average performance.
+
+The AUC of Predictions with test data is telling us that our model has a 75.99% AUC score (remember that an AUC ranges between 0.5 and 1, where 0.5 is random and 1 is perfect).
+
+
+
+# FDA
+Lets do an FDA fit. FDA does classification only.
+
+```{r}
+getModelInfo()$fda$type
+```
+
+
+## Train control object
+```{r}
+# we will use the above defined control object
+train_ctrl
+```
+
+## fit FDA
+```{r}
+set.seed(seed)
+
+x<-train.predictors # predictors
+y<-train.response # response
+
+fdaFit <- train(x, y, 
+                method='fda',
+                trControl=train_ctrl,
+                metric = "ROC",
+                tuneLength = 5,
+                preProc = c("center", "scale")
+                )
+```
+
+## print fda fit
+```{r}
+fdaFit
+```
+
+## Variable importance
+```{r}
+varImp(fdaFit, scale=F)
+```
+
+## Obtain predicted probabilities and classes of test data
+Accuracy requires classes.
+ROC reguires probabilities
+```{r}
+#classess
+fdaClasses <- predict(object=fdaFit, test.predictors)
+
+#Performance Accuracy
+confusionMatrix(data=fdaClasses, test.response)
+
+# probabilities
+fdaProbs <- predict(object=fdaFit, test.predictors, type='prob')
+
+#performance AUC
+colAUC(fdaProbs, test.response)
+```
+Our model has an accuracy of 73.2%, kappa of 32.32%. Based on these two parameters this model has an average performance.
+
+The AUC of Predictions with test data is telling us that our model has a 74.09% AUC score (remember that an AUC ranges between 0.5 and 1, where 0.5 is random and 1 is perfect).
+
+
+# Boosted Logistic Regression
+Lets do an boosted logistic regression fit. LogitBost does classification only.
+
+```{r}
+getModelInfo()$LogitBoost$type
+```
+
+## Train control object
+```{r}
+# we will use the above defined control object
+train_ctrl
+```
+
+## fit logitBoost
+```{r}
+set.seed(seed)
+
+x<-train.predictors # predictors
+y<-train.response # response
+
+logitBoostFit <- train(x, y, 
+                method='LogitBoost',
+                trControl=train_ctrl,
+                metric = "ROC",
+                tuneLength = 5,
+                  preProc = c("center", "scale")
+                )
+```
+
+## print logitBoostFit
+```{r}
+logitBoostFit
+```
+
+## Variable importance
+```{r}
+varImp(logitBoostFit, scale=F)
+```
+
+
+## Obtain predicted probabilities and classes of test data
+Accuracy requires classes.
+ROC reguires probabilities.
+
+```{r}
+#classes
+logitBoostClasses <- predict(object=logitBoostFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=logitBoostClasses, test.response)
+
+# probabilities
+logitBoostProbs <- predict(object=logitBoostFit, test.predictors, type='prob')
+
+#performance AUC
+colAUC(logitBoostProbs, test.response)
+```
+Our model has an accuracy of 71.6%, kappa of 32.12%. Based on these two parameters this model has an average performance.
+
+The AUC of Predictions with test data is telling us that our model has a 71.90% AUC score (remember that an AUC ranges between 0.5 and 1, where 0.5 is random and 1 is perfect).
+
+
+# Logistic regression Fit
+
+## fit logistic regression
+```{r}
+set.seed(seed)
+
+x<-train.predictors # predictors
+y<-train.response # response
+
+logisticRegFit <- train(x, y, 
+                method='glmnet', family="binomial",
+                trControl=train_ctrl,
+                metric = "ROC",
+                tuneLength = 5,
+                preProc = c("center", "scale")
+                )
+```
+
+## Plot logistic regression model
+```{r}
+ggplot(logisticRegFit,  metric = "ROC")
+```
+
+## Obtain predicted probabilities and classes of test data
+Accuracy requires classes.
+ROC reguires probabilities.
+
+```{r}
+#classes
+logisticRegClasses <- predict(object=logisticRegFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=logisticRegClasses, test.response)
+
+# probabilities
+logisticRegProbs <- predict(object=logisticRegFit, test.predictors, type='prob')
+
+#performance AUC
+colAUC(logisticRegProbs, test.response)
+```
+Our model has an accuracy of 76.8%, kappa of 36.54%. Based on these two parameters this model has an average performance.
+
+The AUC of Predictions with test data is telling us that our model has a 77.59% AUC score (remember that an AUC ranges between 0.5 and 1, where 0.5 is random and 1 is perfect).
+# Gradient Boosting Machine Fit
+
+## fit gbm
+```{r}
+set.seed(seed)
+
+x<-train.predictors # predictors
+y<-train.response # response
+
+gbmFit <- train(x, y, 
+                method='gbm', 
+                trControl=train_ctrl,
+                metric = "ROC",
+                tuneLength = 5,
+                preProc = c("center", "scale")
+                )
+```
+
+## Plot gbm model
+```{r}
+ggplot(gbmFit,  metric = "ROC")
+```
+
+## Obtain predicted probabilities and classes of test data
+Accuracy requires classes.
+ROC reguires probabilities.
+
+```{r}
+#classes
+gbmClasses <- predict(object=gbmFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=gbmClasses, test.response)
+
+# probabilities
+gbmProbs <- predict(object=gbmFit, test.predictors, type='prob')
+
+#performance AUC
+colAUC(gbmProbs, test.response)
+```
+Our model has an accuracy of 75.6%, kappa of 36.85%. Based on these two parameters this model has an average performance.
+
+The AUC of Predictions with test data is telling us that our model has a 76.85% AUC score (remember that an AUC ranges between 0.5 and 1, where 0.5 is random and 1 is perfect).
+
+# Random Forest Fit
+
+## fit random forest
+```{r}
+set.seed(seed)
+
+x<-train.predictors # predictors
+y<-train.response # response
+
+radomForestFit <- train(x, y, 
+                method='rf', 
+                trControl=train_ctrl,
+                metric = "ROC",
+                tuneLength = 5,
+                preProc = c("center", "scale")
+                )
+```
+
+## Plot radomForestFit
+```{r}
+ggplot(radomForestFit,  metric = "ROC")
+```
+
+## Obtain predicted probabilities and classes of test data
+Accuracy requires classes.
+ROC reguires probabilities.
+
+```{r}
+#classes
+radomForestClasses <- predict(object=radomForestFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=radomForestClasses, test.response)
+
+# probabilities
+radomForestProbs <- predict(object=radomForestFit, test.predictors, type='prob')
+
+#performance AUC
+colAUC(radomForestProbs, test.response)
+```
+Our model has an accuracy of 72%, kappa of 13.58%. Based on these two parameters this model has an average performance.
+
+The AUC of Predictions with test data is telling us that our model has a 77.06% AUC score (remember that an AUC ranges between 0.5 and 1, where 0.5 is random and 1 is perfect).
+
+# Decision Tree Fit
+
+## fit decision tree
+```{r}
+set.seed(seed)
+
+x<-train.predictors # predictors
+y<-train.response # response
+
+decesionTreeFit <- train(x, y, 
+                method='rpart', 
+                trControl=train_ctrl,
+                metric = "ROC",
+                tuneLength = 5,
+                preProc = c("center", "scale")
+                )
+```
+
+## Plot decesionTreeFit
+```{r}
+ggplot(decesionTreeFit,  metric = "ROC")
+```
+
+## Obtain predicted probabilities and classes of test data
+Accuracy requires classes.
+ROC reguires probabilities.
+
+```{r}
+#classes
+decesionTreeClasses <- predict(object=decesionTreeFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=decesionTreeClasses, test.response)
+
+# probabilities
+decesionTreeProbs <- predict(object=decesionTreeFit, test.predictors, type='prob')
+
+#performance AUC
+colAUC(decesionTreeProbs, test.response)
+```
+Our model has an accuracy of 67.2%, kappa of 15.46%. Based on these two parameters this model has a poor performance.
+
+The AUC of Predictions with test data is telling us that our model has a 71.30 AUC score (remember that an AUC ranges between 0.5 and 1, where 0.5 is random and 1 is perfect).
+
+# De-register parallel processing cluster
+After processing the data, we explicitly shut down the cluster by calling the stopCluster() and registerDoSEQ() functions. The registerDoSEQ() function is required to force R to return to single threaded processing.
+
+```{r}
+# stop cluster
+stopCluster(clust)
+
+# return to single threaded processing
+registerDoSEQ()
+```
+
+# Models comparisons
+
+## Training results
+
+### Resampling training results(ROC, Sens, Spec)
+How do these models compare in terms of their resampling results? 
+
+The resamples function can be used to collect, summarize and contrast the resampling results. Since the random number seeds were initialized to the same value prior to calling train, the same folds were used for each model. To assemble them:
+
+```{r}
+#collect and summarize the resampling results
+resamps <- resamples(list( svmRadialFit=svmRadialFit, fdaFit=fdaFit, logitBoostFit=logitBoostFit, logisticRegFit=logisticRegFit, gbmFit=gbmFit, radomForestFit=radomForestFit, decesionTreeFit=decesionTreeFit ))
+
+# Print the summary of the resampling results
+summary(resamps)
+```
+
+### Box plot to visualize the results
+```{r}
+bwplot(resamps )
+
+```
+
+### Dot plot to visualize the results
+```{r}
+dotplot(resamps )
+
+```
+
+
+## Predictions on test data results
+We can use accuracy but for this exercise let us use AUC.
+
+### Predicted AUC
+
+```{r}
+# svmRadial AUC
+aucSvmRadial<-colAUC(svmRadialProbs, test.response)
+
+# fda AUC
+aucFda=colAUC(fdaProbs, test.response)
+
+# logitBoost AUC
+aucLogitBoost<-colAUC(logitBoostProbs, test.response)
+
+# logisticRegFit AUC
+aucLogisticReg<-colAUC(logisticRegProbs, test.response)
+
+# gbmFit AUC
+aucGbm<-colAUC(gbmProbs, test.response)
+
+# radomForestFit AUC
+aucRadomForest<-colAUC(radomForestProbs, test.response)
+
+# decesionTreeFit AUC
+aucDecesionTree<-colAUC(decesionTreeProbs, test.response)
+
+#put the data together in a dataframe while selecting only one value of each
+data.frame(aucSvmRadial=aucSvmRadial[1], aucFda=aucFda[1], aucLogitBoost=aucLogitBoost[1], aucLogisticReg=aucLogisticReg[1], aucGbm=aucGbm[1], aucRadomForest=aucRadomForest[1], aucDecesionTree=aucDecesionTree[1])
+```
+
+Ranking the models based on predicted AUC starting with the best performing model:
+
+1. Logistic Regression              --> Predicted AUC=0.7759238
+2. Random Forest                    --> Predicted AUC=0.7705524
+3. Gradient Boosting Machine        --> Predicted AUC=0.7684571
+4. Radil kernel SVM                 --> Predicted AUC=0.7599238
+5. Flexible Discriminant Analysis   --> Predicted AUC=0.7409524	
+6. Boosted Logistic Regression      --> Predicted AUC=0.7190476
+7. Decision Tree                    --> Predicted AUC=0.7130286
+
+
+
+In the next study we will tune the models further and reduce model complexity by reducig irrelevant features and correlated features. We will begin with the logistic regression model.
+
