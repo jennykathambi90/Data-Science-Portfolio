@@ -680,6 +680,49 @@ Our model has an accuracy of 67.2%, kappa of 15.46%. Based on these two paramete
 
 The AUC of Predictions with test data is telling us that our model has a 71.30 AUC score (remember that an AUC ranges between 0.5 and 1, where 0.5 is random and 1 is perfect).
 
+# XGBOOST
+
+## fit xgboost
+```{r}
+set.seed(seed)
+
+x<-train.predictors # predictors
+y<-train.response # response
+
+xgBoostFit <- train(x, y, 
+                method='xgbTree', 
+                trControl=train_ctrl,
+                metric = "ROC",
+                tuneLength = 5,
+                preProc = c("center", "scale")
+                )
+```
+
+## Plot the fit
+```{r}
+ggplot(xgBoostFit,  metric = "ROC")
+```
+
+## Obtain predicted probabilities and classes of test data
+Accuracy requires classes.
+ROC reguires probabilities.
+
+```{r}
+#classes
+xgBoostClasses <- predict(object=xgBoostFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=xgBoostClasses, test.response)
+
+# probabilities
+xgBoostProbs <- predict(object=xgBoostFit, test.predictors, type='prob')
+
+#performance AUC
+colAUC(xgBoostProbs, test.response)
+```
+Our model has an accuracy of 74%, kappa of 32.15%. Based on these two parameters this model has an average performance.
+
+The AUC of Predictions with test data is telling us that our model has a 77.65 AUC score (remember that an AUC ranges between 0.5 and 1, where 0.5 is random and 1 is perfect).
 # De-register parallel processing cluster
 After processing the data, we explicitly shut down the cluster by calling the stopCluster() and registerDoSEQ() functions. The registerDoSEQ() function is required to force R to return to single threaded processing.
 
@@ -702,7 +745,7 @@ The resamples function can be used to collect, summarize and contrast the resamp
 
 ```{r}
 #collect and summarize the resampling results
-resamps <- resamples(list( svmRadialFit=svmRadialFit, fdaFit=fdaFit, logitBoostFit=logitBoostFit, glmnetLogisticRegFit=glmnetLogisticRegFit, gbmFit=gbmFit, radomForestFit=radomForestFit, decesionTreeFit=decesionTreeFit ))
+resamps <- resamples(list( xgBoostFit=xgBoostFit,radomForestFit=radomForestFit, glmnetLogisticRegFit=glmnetLogisticRegFit, svmRadialFit=svmRadialFit, fdaFit=fdaFit, logitBoostFit=logitBoostFit,  gbmFit=gbmFit,  decesionTreeFit=decesionTreeFit,  ))
 
 # Print the summary of the resampling results
 summary(resamps)
@@ -748,21 +791,25 @@ aucRadomForest<-colAUC(radomForestProbs, test.response)
 # decesionTreeFit AUC
 aucDecesionTree<-colAUC(decesionTreeProbs, test.response)
 
+#xgBoostFit AUC
+aucXgTree<-colAUC(xgBoostProbs, test.response)
+
 #put the data together in a dataframe while selecting only one value of each
-data.frame(aucSvmRadial=aucSvmRadial[1], aucFda=aucFda[1], aucLogitBoost=aucLogitBoost[1], aucGlmnetLogisticReg=aucGlmnetLogisticReg[1], aucGbm=aucGbm[1], aucRadomForest=aucRadomForest[1], aucDecesionTree=aucDecesionTree[1])
+data.frame(aucSvmRadial=aucSvmRadial[1], aucFda=aucFda[1], aucLogitBoost=aucLogitBoost[1], aucGlmnetLogisticReg=aucGlmnetLogisticReg[1], aucGbm=aucGbm[1], aucRadomForest=aucRadomForest[1], aucDecesionTree=aucDecesionTree[1], aucXgTree=aucXgTree[1])
 ```
 
 Ranking the models based on predicted AUC starting with the best performing model:
+1. XgbTree                          -->Predicted AUC=77.65
+2. Glmnet Logistic Regression       --> Predicted AUC=0.7759238
+3. Random Forest                    --> Predicted AUC=0.7705524
+4. Gradient Boosting Machine        --> Predicted AUC=0.7684571
+5. Radail kernel SVM                --> Predicted AUC=0.7599238
+6. Flexible Discriminant Analysis   --> Predicted AUC=0.7409524	
+7. Boosted Logistic Regression      --> Predicted AUC=0.7190476
+8. Decision Tree                    --> Predicted AUC=0.7130286
 
-1. Glmnet Logistic Regression       --> Predicted AUC=0.7759238
-2. Random Forest                    --> Predicted AUC=0.7705524
-3. Gradient Boosting Machine        --> Predicted AUC=0.7684571
-4. Radil kernel SVM                 --> Predicted AUC=0.7599238
-5. Flexible Discriminant Analysis   --> Predicted AUC=0.7409524	
-6. Boosted Logistic Regression      --> Predicted AUC=0.7190476
-7. Decision Tree                    --> Predicted AUC=0.7130286
+The best model is the xgbTree model followed by the glmnet logistic regression model.
 
-The glmnet logistic regression is doing well probably because it has generalized its fuction well due to important feature selection.
+In the next study we will tune the xgboost model further.
 
-In the next study we will tune the models further and reduce model complexity by reducig irrelevant features and correlated features. 
 
