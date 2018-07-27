@@ -1,0 +1,587 @@
+---
+title: "Credit Risk Modelling"
+author: "Jane Kathambi"
+date: "26 July 2018"
+output: 
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+    toc_depth: 6
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+
+# Introduction
+Modeling credit risk for both personal and company loans is of major importance for banks. The probability that a debtor will default is a key component in getting to a measure for credit risk. 
+
+When a bank receives a loan application, based on the applicant's profile the bank has to make a decision regarding whether to go ahead with the loan approval or not. Two types of risks are associated with the bank's decision:
+
+1. If the applicant is a good credit risk, i.e. is likely to repay the loan, then not approving the loan to the person results in a loss of business to the bank.
+2. If the applicant is a bad credit risk, i.e. is not likely to repay the loan, then approving the loan to the person results in a financial loss to the bank.
+
+We will use real-life credit data to explore how to model credit risk by using Extreme Gradient Boosting. This model is good at both generalization and prediction accuracy.
+
+Why did i choose this model?:
+
+1. Parallel Computing: It is enabled with parallel processing (using OpenMP); i.e., when you run xgboost, by default, it would use all the cores of your laptop/machine.
+
+2. Regularization: I believe this is the biggest advantage of xgboost. GBM has no provision for regularization. Regularization is a technique used to avoid overfitting in linear and tree-based models.
+
+3. Enabled Cross Validation: In R, we usually use external packages such as caret and mlr to obtain CV results. But, xgboost is enabled with internal CV function.
+
+4. Missing Values: XGBoost is designed to handle missing values internally. The missing values are treated in such a manner that if there exists any trend in missing values, it is captured by the model.
+
+5. Flexibility: In addition to regression, classification, and ranking problems, it supports user-defined objective functions also. An objective function is used to measure the performance of the model given a certain set of parameters. Furthermore, it supports user defined evaluation metrics as well.
+
+6. Availability: Currently, it is available for programming languages such as R, Python, Java, Julia, and Scala.
+
+7. Save and Reload: XGBoost gives us a feature to save our data matrix and model and reload it later. Suppose, we have a large data set, we can simply save the model and use it in future instead of wasting time redoing the computation.
+
+8. Tree Pruning: Unlike GBM, where tree pruning stops once a negative loss is encountered, XGBoost grows the tree upto max_depth and then prune backward until the improvement in loss function is below a threshold.
+
+
+
+# Credit Data 
+We will use the German credit dataset. The data contains data on 20 variables and the classification whether an applicant is considered a Good or a Bad credit risk for 1000 loan applicants.
+
+# Load the required libraries
+
+* caret: for machine learning
+* gmodels package: Contains the CrossTable() function
+* tidyverse: For data mangling and visualization.
+* caTools: is to score the models using a Receiver Operating Characteristic (ROC) curve.
+* library(xgboost)
+```{r}
+library(gmodels)
+library(tidyverse)
+library(caret)
+library(caTools)
+library(xgboost)
+```
+
+# Load the credit data
+```{r}
+loan_data<-read.table('data/german.data.txt')
+```
+
+# Data exploration and cleaning
+
+## The strucutre and summary of the data
+We will view the structure of the data set to get familiar with it, we will use glimpse a function of the dplyr package.
+```{r}
+# View the structure of loan_data
+#glimpse(loan_data)
+
+```
+
+### Change variable names
+The variables names don't represent the true meaning of the data, so let us change the variable names as follows:
+```{r}
+# assign the data new column names
+colnames(loan_data) <- c( 'account_balance', 
+                    'months_loan_duration', 
+                    'credit_history', 
+                    'purpose', 
+                    'credit_amount', 
+                    'savings_balance', 
+                    'employment_status', 
+                    'installment_rate', 
+                    'personal_status', 
+                    'other_debtors_guarantors', 
+                    'present_residence_years',  
+                    'property', 
+                    'age', 
+                    'other_installment', 
+                    'housing', 
+                    'number_credits_this_bank', 
+                    'job', 
+                    'number_dependents', 
+                    'phone', 
+                    'foreign_worker', 
+                     'default')
+
+# View the structure of loan_data to comfirm new col names
+glimpse(loan_data)
+```
+
+
+## Exploring the credit data (default rates, outliers, missing values).
+
+## Default rates
+
+After being given loan_data, you are particularly interested about the defaulted loans in the data set. You want to get an idea of the number, and percentage of defaults. Defaults are rare, so you always want to check what the proportion of defaults is in a loan dataset. 
+
+To learn more about variable structures and spot unexpected tendencies in the data, you should examine the relationship between default variable and certain factor variables. 
+
+*What is the proportion of defaults in the data?*
+
+In order for the model to be able to make accurate forecasts it needs to see enough examples of what constitutes a default. For this reason it is important that there is a sufficiently large number of defaults in the data. Typically in practice, data with less than 5% of defaults pose strong modelling challenges.
+
+1. Have a look at the CrossTable() of loan status, using just one argument: loan_data$default.
+
+
+```{r}
+
+# Call CrossTable() on loan_status
+CrossTable(loan_data$default, prop.r=TRUE, prop.c=FALSE, prop.t=FALSE, prop.chisq=FALSE)
+```
+
+Our data has 30% defaults. So this data is good for modelling.
+
+2. Call CrossTable() with x argument installment_rate and y argument default. We only want row-wise proportions, so set prop.r to TRUE, but prop.c , prop.t and prop.chisq to FALSE (default values here are TRUE, and this would lead to inclusion of column proportions, table proportions and chi-square contributions for each cell. We do not need these here.) We expect high installment rates to be associated with high default rates. Let us eplore the data to see if this hypothesis holds true.
+
+```{r}
+# Call CrossTable() on installment rate and loan_status
+CrossTable(loan_data$installment_rate , loan_data$default, prop.r=TRUE, prop.c=FALSE, prop.t=FALSE, prop.chisq=FALSE)
+
+```
+
+As you can see the proportion of defaults increase when the installment rate increase.
+
+## Missing values
+```{r}
+anyNA(loan_data)
+```
+
+There are no missing values
+
+## Oultiers
+
+Lets explore some continous variable to detect outliers:
+1. credit_amount
+2. installment_rate
+3. present_residence_years
+4. age
+5. number_credits_this_bank
+6. number_dependents
+7. months_loan_duration
+
+We will use boxplots
+```{r}
+attach(loan_data)
+
+par(mfrow=c(1,1))
+boxplot(age)
+hist(age)
+
+```
+
+There are no outliers in this data set.
+
+# Data preprocessing
+To use xgboost package, keep these things in mind:
+
+1. Convert the categorical variables into numeric using one hot encoding
+2. For classification, if the dependent variable belongs to class factor, convert it to numeric
+
+## Fix factor variables
+We have to fix the factor variables as most models only accept numeric data. In a nutshell, dummifying factors breaks all the unique values into separate columns.
+```{r}
+#dummyfy factor variables
+loan_data_dummy <- dummyVars("~.",data=loan_data, fullRank=F)
+loan_data <- as.data.frame(predict(loan_data_dummy, loan_data))
+
+#view the structure of the new data frame
+#glimpse(loan_data)
+```
+
+## Response variable coding
+
+Please note that Default is coded as 2 while non-default 1 as shown below:
+```{r}
+table(loan_data$default)
+```
+
+Let us change the levels to def and non_def
+
+```{r}
+# Change the levels 
+loan_data$default <- ifelse(loan_data$default==2,'def','non_def')
+
+# coarse default to factor
+loan_data$default <- as.factor(loan_data$default)
+
+#confirm levels have changed
+levels(loan_data$default)
+
+```
+
+## split data into training set and test set
+```{r}
+seed=107
+
+set.seed(seed)
+
+inTrain <- createDataPartition(
+  
+  ## the outcome data are needed
+  y = loan_data$default,
+  
+  ## The percentage of data in the training set
+  p = .75,
+
+  list = FALSE
+)
+ref.train.data <- loan_data[ inTrain,]
+
+ref.test.data <- loan_data[-inTrain,]
+
+train.data <- loan_data[ inTrain,]
+train.predictors<- train.data[, names(train.data)!='default'] # predictors
+train.response<- train.data$default # response
+
+test.data <- loan_data[-inTrain,]
+test.predictors<- test.data[, names(test.data)!='default'] # predictors
+test.response<- test.data$default # response
+
+```
+
+#  Caret XGBOOST
+## Parameter tuning
+I'll follow the most common but effective steps in parameter tuning:
+
+1. First, you build the xgboost model using default parameters. You might be surprised to see that default parameters sometimes give impressive accuracy.
+
+2. If you get a depressing model accuracy, do this: fix eta = 0.1, leave the rest of the parameters at default value, using xgb.cv function get best n_rounds. Now, build a model with these parameters and check the accuracy.
+
+3. Otherwise, you can perform a grid search on rest of the parameters (max_depth, gamma, subsample, colsample_bytree etc) by fixing eta and nrounds. Note: If using gbtree, don't introduce gamma until you see a significant difference in your train and test error.
+
+4. Using the best parameters from grid search, tune the regularization parameters(alpha,lambda) if required.
+
+5. At last, increase/decrease eta and follow the procedure. But remember, excessively lower eta values would allow the model to learn deep interactions in the data and in this process, it might capture noise. So be careful!
+
+## Caret xgboost tunable parameters
+```{r}
+#modelLookup("xgbTree")
+getModelInfo("xgbTree")
+```
+1. nrounds		        # Boosting Iterations or number of trees
+2. max_depth	        # Max Tree Depth	
+3. eta	              # Shrinkage	or learning rate
+4. gamma	            # Minimum Loss Reduction	
+5. colsample_bytree	  # Subsample Ratio of Columns	
+6. min_child_weight	  # Minimum Sum of Instance Weight	
+7. subsample          # Subsample Percentage
+
+## Caret Default paramters
+we'll first build our model using default parameters
+```{r}
+#default parameters
+#params <- list(booster = "gbtree", objective = "binary:logistic", eta=0.3, gamma=0, max_depth=6, min_child_weight=1, subsample=1, colsample_bytree=1)
+```
+
+## Train control
+```{r}
+set.seed(seed)
+
+train_ctrl <- trainControl(
+  method = "repeatedcv", 
+  repeats = 3,
+  returnResamp = "all",
+  
+  summaryFunction = twoClassSummary,#(ROC, Sensitivity, Specificity). Used for twoClass-problems
+  
+  classProbs = TRUE, #Since the ROC curve is based on the predicted class probabilities (which are not computed automatically)
+  
+  allowParallel = TRUE # allow paralellel processing
+)
+```
+
+## tune grid
+caret default
+
+## Fit the default model
+```{r}
+
+set.seed(seed)
+
+x<-train.predictors # predictors
+y<-train.response # response
+
+xgbDefaultFit <- train(x, y, 
+                method='xgbTree', 
+                trControl=train_ctrl,
+                metric = "ROC",
+                tuneLength = 5,
+                preProc = c("center", "scale")
+                )
+```
+
+## Output the model
+```{r}
+xgbDefaultFit
+```
+
+
+## Best tune
+```{r}
+xgbDefaultFit$bestTune
+```
+Tuning parameter 'gamma' was held constant at a value of 0
+
+Tuning parameter 'min_child_weight' was held constant at a value of 1
+ROC was used to select the optimal model using the largest value.
+The final values used for the model were nrounds = 150, max_depth =
+ 1, eta = 0.3, gamma = 0, colsample_bytree = 0.6, min_child_weight =
+ 1 and subsample = 1.
+ 
+## Evaluate model
+### Obtain predicted probabilities and classes of test data
+Accuracy requires classes.
+ROC reguires probabilities.
+
+```{r}
+#classes
+xgbDefaultClasses <- predict(object=xgbDefaultFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=xgbDefaultClasses, test.response)
+
+# probabilities
+xgbDefaultProbs <- predict(object=xgbDefaultFit, test.predictors, type='prob')
+
+#performance AUC
+colAUC(xgbDefaultProbs, test.response)
+```
+Our model has an accuracy of 74%, kappa of 32.15%. Based on these two parameters this model has an average performance.
+
+The AUC of Predictions with test data is telling us that our model has a 77.65 AUC score (remember that an AUC ranges between 0.5 and 1, where 0.5 is random and 1 is perfect).
+
+Tuning parameter 'gamma' was held constant at a value of 0
+
+Tuning parameter 'min_child_weight' was held constant at a value of 1
+ROC was used to select the optimal model using the largest value.
+The final values used for the model were nrounds = 150, max_depth =
+ 1, eta = 0.3, gamma = 0, colsample_bytree = 0.6, min_child_weight =
+ 1 and subsample = 1.
+
+## Tuned Model With grid search
+We will tune as follows:
+
+1. Perform a grid search on eta, leave the rest at default. 
+2. Check the accuracy by use of predictions on test data. Obtain best eta.
+
+3. Perform a grid search on ntree with fixed best eta, while the rest ramain at default. 
+4. Check the accuracy by use of predictions on test data. Obtain best ntree.
+
+5. Perform a grid search on rest of the parameters (max_depth, gamma, subsample, colsample_bytree etc) by fixing best eta and best nrounds.
+6. Check the accuracy by use of predictions on test data.
+
+### control
+```{r}
+set.seed(seed)
+
+train_ctrl <- trainControl(
+  method = "repeatedcv", 
+  repeats = 3,
+  returnResamp = "all",
+  search="grid",
+  
+  summaryFunction = twoClassSummary,#(ROC, Sensitivity, Specificity). Used for twoClass-problems
+  
+  classProbs = TRUE, #Since the ROC curve is based on the predicted class probabilities (which are not computed automatically)
+  
+  allowParallel = TRUE # allow paralellel processing
+)
+```
+
+### Grid: Tuning eta
+```{r}
+set.seed(seed)
+
+xgb.grid <- expand.grid(eta = seq(0.01,0.3, by=0.01), nrounds=100, max_depth =
+ 6, gamma = 0, colsample_bytree = 1, min_child_weight = 1, subsample = 1)
+```
+
+
+### Fit the eta tuned model
+```{r}
+
+set.seed(seed)
+
+x<-train.predictors # predictors
+y<-train.response # response
+
+xgbEtaTunedFit <- train(x, y, 
+                method='xgbTree', 
+                trControl=train_ctrl,
+                metric = "ROC",
+                tuneLength = 5,
+                tuneGrid = xgb.grid, 
+                preProc = c("center", "scale")
+                )
+```
+
+## Output the model
+```{r}
+xgbEtaTunedFit
+```
+
+
+## Best tune
+```{r}
+xgbEtaTunedFit$bestTune
+```
+### Evaluate model
+#### Obtain predicted probabilities and classes of test data
+Accuracy requires classes.
+ROC reguires probabilities.
+
+```{r}
+#classes
+xgbEtaTunedClasses <- predict(object=xgbEtaTunedFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=xgbEtaTunedClasses, test.response)
+
+# probabilities
+xgbEtaTunedProbs <- predict(object=xgbEtaTunedFit, test.predictors, type='prob')
+
+#performance AUC
+colAUC(xgbEtaTunedProbs, test.response)
+```
+Our model has an accuracy of 74.4%, kappa of 34.56%. Based on these two parameters this model has an average performance.
+
+The AUC of Predictions with test data is telling us that our model has a 77.34 AUC score (remember that an AUC ranges between 0.5 and 1, where 0.5 is random and 1 is perfect).
+
+The best eta is 0.06 next we tune nrounds
+
+
+### Grid: Tuning nrounds
+```{r}
+set.seed(seed)
+
+xgb.grid <- expand.grid(eta = 0.06, nrounds= 76, gamma = 0.5, max_depth =
+ 6, colsample_bytree = 1, min_child_weight = 1, subsample = 1)
+```
+
+
+### Fit the eta,nrounds tuned model
+```{r}
+
+set.seed(seed)
+
+x<-train.predictors # predictors
+y<-train.response # response
+
+xgbEtaNroundsTunedFit <- train(x, y, 
+                method='xgbTree', 
+                trControl=train_ctrl,
+                metric = "ROC",
+                tuneLength = 5,
+                tuneGrid = xgb.grid, 
+                preProc = c("center", "scale")
+                )
+```
+
+## Output the model
+```{r}
+xgbEtaNroundsTunedFit
+```
+
+
+## Best tune
+```{r}
+xgbEtaNroundsTunedFit$bestTune
+```
+### Evaluate model
+#### Obtain predicted probabilities and classes of test data
+Accuracy requires classes.
+ROC reguires probabilities.
+
+```{r}
+#classes
+xgbEtaNroundsTunedClasses <- predict(object=xgbEtaNroundsTunedFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=xgbEtaNroundsTunedClasses, test.response)
+
+# probabilities
+xgbEtaNroundsTunedProbs <- predict(object=xgbEtaNroundsTunedFit, test.predictors, type='prob')
+
+#performance AUC
+colAUC(xgbEtaNroundsTunedProbs, test.response)
+```
+Our model has an accuracy of 76.4%, kappa of 38.92%. Based on these two parameters this model has an average performance.
+
+The AUC of Predictions with test data is telling us that our model has a 77.56 AUC score (remember that an AUC ranges between 0.5 and 1, where 0.5 is random and 1 is perfect).
+
+The best eta is 0.06, best ntree is 76.
+
+### Grid: Tuning the other parameters
+```{r}
+set.seed(seed)
+
+xgb.grid <- expand.grid(eta = 0.06, nrounds= 76, gamma = 0.5, max_depth = 5, colsample_bytree = 0.5, min_child_weight = 1, subsample =1)
+
+```
+
+
+### Fit  all parameters tuned model
+```{r}
+
+set.seed(seed)
+
+x<-train.predictors # predictors
+y<-train.response # response
+
+xgbAllTunedFit <- train(x, y, 
+                method='xgbTree', 
+                trControl=train_ctrl,
+                metric = "ROC",
+                tuneLength = 5,
+                tuneGrid = xgb.grid, 
+                preProc = c("center", "scale")
+                )
+```
+
+## Output the model
+```{r}
+xgbAllTunedFit
+```
+
+## Best tune
+```{r}
+xgbAllTunedFit$bestTune
+```
+### Evaluate model
+#### Obtain predicted probabilities and classes of test data
+Accuracy requires classes.
+ROC reguires probabilities.
+
+```{r}
+#classes
+xgbAllTunedClasses <- predict(object=xgbAllTunedFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=xgbAllTunedClasses, test.response)
+
+# probabilities
+xgbAllTunedProbs <- predict(object=xgbAllTunedFit, test.predictors, type='prob')
+
+#performance AUC
+colAUC(xgbAllTunedProbs, test.response)
+```
+Our model has an accuracy of 76.8%, kappa of 38.69%. Based on these two parameters this model has an average performance.
+
+The AUC of Predictions with test data is telling us that our model has a 0.79626 AUC score (remember that an AUC ranges between 0.5 and 1, where 0.5 is random and 1 is perfect).
+
+The best eta is 0.06, best ntround is 76. best gamma 0.5, best maxdepth=5, colsample_bytree = 0.5, min_child_weight = 1, subsample =1, auc=0.79626
+
+# Feature importance
+```{r}
+# List features according to their importance
+variables.rank<-varImp(xgbAllTunedFit)
+class(variables.rank)
+
+# plot top 20 features
+plot(variables.rank, top = 20)
+```
+It appears the credit amount has the highest predictive value for determining creditability. Notably, the variables not on this list do not have a strong predictive value for creditability.
+
+
+
+
+
