@@ -28,8 +28,10 @@ The data were collected as part of the on-going effort of the college's administ
 # Load the required libraries
 * tidyverse for easy data manipulation and visualization
 * caret for easy machine learning workflow
+* car contains the Salaries data set
 
 ```{r}
+library(car)
 library(tidyverse)
 library(caret)
 theme_set(theme_bw())
@@ -98,7 +100,7 @@ summary(model)
 ```
 From the output above, the fact that the coefficient for sexMale in the regression output is positive indicates that being a male is associated with increase in salary (relative to Females).
 
-The average salary for female is estimated to be 101002, whereas males are estimated a total of 101002 + 14088 = 115090. The p-value for the dummy variable sexMale is very significant, suggesting that there is a statistical evidence of a difference in average salary between the genders.
+The average salary for female is estimated to be 100819, whereas males are estimated a total of 100819 + 13912 = 114731. The p-value for the dummy variable sexMale is very significant, suggesting that there is a statistical evidence of a difference in average salary between the genders.
 
 The contrasts() function returns the coding that R have used to create the dummy variables:
 ```{r}
@@ -134,7 +136,7 @@ summary(model)
 ```
 The fact that the coefficient for sexFemale in the regression output is negative indicates that being a Female is associated with decrease in salary (relative to Males).
 
-Now the estimates for bo=Male and b1 are 115090 and -14088, respectively, leading once again to a prediction of average salary of 115090 for males and a prediction of 115090 - 14088 = 101002 for females.
+Now the estimates for bo=Male and b1 are 113717 and -15813, respectively, leading once again to a prediction of average salary of 113717 for males and a prediction of 113717 - 15813 = 97904 for females.
 
 # Categorical variables with more than two levels
 Generally, a categorical variable with n levels will be transformed into n-1 variables each with two levels. These n-1 new variables contain the same information than the single variable. This recoding creates a table called contrast matrix.
