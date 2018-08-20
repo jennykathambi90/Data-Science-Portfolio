@@ -1,0 +1,2540 @@
+---
+title: "Credit Risk Modelling: Mkopa"
+author: "Jane Kathambi"
+date: "07 August 2018"
+output: 
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+    toc_depth: 6
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+
+# Introduction
+When a lending institution receives a loan application, based on the applicant's profile the bank has to make a decision regarding whether to go ahead with the loan approval or not. Two types of risks are associated with the institution's decision:
+
+1. If the applicant is a good credit risk, i.e. is likely to repay the loan, then not approving the loan to the person results in a loss of business to the institution.
+
+2. If the applicant is a bad credit risk, i.e. is not likely to repay the loan, then approving the loan to the person results in a financial loss to the the istitutuion.
+
+It may be assumed that the second risk is a greater risk, as the institution lending the money to a untrustworthy party has a higher chance of not being paid back the borrowed amount. So if the institution is focused more on risk aversness i.e then the performance metric that should be used is specificity.
+
+What if the institution is more concerned about profit maximization? Sensitivity metric should be used.
+
+However, in business terms, we try to minimize the risk and maximize the profit for the institution. In this case the best metric to use is AUC, as it balances between specificity and sensitivity.
+
+So its on the part of the institution to evaluate the risks associated with lending money to a customer. This study aims at addressing this problem by using the applicant's demographic and socio-economic profiles to assess the risk of lending loan to the customer.
+
+To minimize loss from the bank's perspective, the bank needs a decision rule regarding who to give approval of the loan and who not to. An applicant's demographic and socio-economic profiles are considered by loan managers before a decision is taken regarding his/her loan application.
+
+I will fit a model to predict risk using Mkopa credit data. I will use caret's xgbTree function.
+
+Why did i choose this model?:
+
+1. Parallel Computing: It is enabled with parallel processing (using OpenMP); i.e., when you run xgboost, by default, it would use all the cores of your laptop/machine.
+
+2. Regularization: I believe this is the biggest advantage of xgboost. GBM has no provision for regularization. Regularization is a technique used to avoid overfitting in linear and tree-based models.
+
+3. Enabled Cross Validation: In R, we usually use external packages such as caret and mlr to obtain CV results. But, xgboost is enabled with internal CV function.
+
+4. Missing Values: XGBoost is designed to handle missing values internally. The missing values are treated in such a manner that if there exists any trend in missing values, it is captured by the model.
+
+5. Flexibility: In addition to regression, classification, and ranking problems, it supports user-defined objective functions also. An objective function is used to measure the performance of the model given a certain set of parameters. Furthermore, it supports user defined evaluation metrics as well.
+
+6. Availability: Currently, it is available for programming languages such as R, Python, Java, Julia, and Scala.
+
+7. Save and Reload: XGBoost gives us a feature to save our data matrix and model and reload it later. Suppose, we have a large data set, we can simply save the model and use it in future instead of wasting time redoing the computation.
+
+8. Tree Pruning: Unlike GBM, where tree pruning stops once a negative loss is encountered, XGBoost grows the tree upto max_depth and then prune backward until the improvement in loss function is below a threshold.
+
+# Methodology
+I am going to:
+1. Explore the data to understand it.
+2. Remove zero or near zero variables.
+3. Split the data into training set and test set.
+4. Build a classification model using xgTree of caret package
+6. Using the test data, evaluate the efficiency of the model based on Area under curve  i.e  AUC, the higher the better. Auc is good for imbalanced classes. 
+7. Tune the model for better AUC on test data.
+8. Compare models and select the best model that has the highest AUC on test data.
+
+I will save best predictors and also keep on saving my models and AUCs for using later since my computer is too slow. So make sure to create three more folders i.e predictors, AUCs and models to avoid errors or comment out the saving bit of the code.
+
+# Mkopa Credit Data 
+I will use Mkopa credit data. The data contains 13 variables: 
+
+## Input Features
+- `Product`: The product type purchased by the customer
+- `CustomerGender`: Self-explanatory
+- `Location`: The location where the loan was issued. (Also includes a long-tail of legacy locations)
+- `Region`: The sales region where the device was purchased. Includes many regions which have since been changed. The current set of main sales regions are Regions 1-7.
+- `TotalPrice`: The total amount to-be-paid by the customer over the course of the loan (including deposit and daily payments)
+- `StartDate`: The day on which the customer's loan became active
+- `Deposit`: The initial deposit required from the customer prior to loan activation
+- `DailyRate`: The amount that the customer must pay daily in order to continue to use their device
+- `TotalDays`: The number of days for which the customer is expected to continue paying the daily rate
+- `AmountPaid30`: The amount that the customer had repaid as of the 30th day of their loan
+- `AmountPaid60`: The amount that the customer had repaid as of the 60th day of their loan
+- `AmountPaid360`: The amount that the customer had repaid as of the 360th day of their loan
+
+## Outcome Variable
+
+- `LoanStatus360`: The status of the loan as of day 360:
+  - `Active`: The customer is still actively repaying their loan.
+  - `Blocked`: The customer has had their account blocked after more than 30 days without a payment.
+  - `Finished Payment`: The customer has successfully repaid their loan.
+
+# Load the required libraries
+
+*gmodels: has crosstable function for data exploration.
+* caret: for machine learning
+* gmodels package: Contains the CrossTable() function
+* tidyverse: For data mangling and visualization.
+* caTools: is to score the models using a Receiver Operating Characteristic (ROC) curve
+* readr: for loading csv data.
+* lubridate: for date type conversion.
+* pander: for rendering tables in markdown
+* gridExtra: for arraging output on a window
+* stringr: for string manipulation
+
+```{r}
+library(gmodels)
+library(tidyverse)
+library(caret)
+library(caTools)
+library(pander)#rendering tables in markdown
+library(gridExtra)
+library(readr)
+library(lubridate)
+library(stringr)
+library(DT)
+```
+
+# Load the credit data
+```{r}
+loan_data<-read_csv('data/Data Science assessment.csv')
+```
+
+# Data pre-exploration and cleaning
+
+## Variable types
+The first step in exploring the data is to determine what type of variables are present in the data. Are the variables categorical or quantitative? If they are categorical are they binary or do they have multiple levels?
+
+```{r}
+# Show a preview
+loan_data %>% datatable(style="bootstrap")
+
+# View the structure of loan_data
+glimpse(loan_data)
+```
+
+## Data Cleaning
+
+### variable names
+
+Let us encode the names to standard variable names.
+```{r}
+# Split the variable names
+names(loan_data)<-gsub('([[:upper:]])', ' \\1', names(loan_data) )
+
+# convert names to lower case, trim and and replace space with underscore
+names(loan_data)<-names(loan_data) %>% 
+                    tolower %>% 
+                    str_trim()%>%
+                    str_replace_all("[' ']", "_") 
+#verify changes
+names(loan_data)
+```
+
+### Coarse variables to factor
+
+Let us coarce Product, CustomerGender, Location, Region and LoanStatus360 variables to factor.
+```{r}
+#choose columns to coarse to factor
+cols<-c('product', 'customer_gender','loan_status360', 'location', 'region')
+
+#Use lapply() to coerce and replace the chosen columns:
+loan_data[cols] <- lapply(loan_data[cols], factor)
+
+# glimpse
+glimpse(loan_data)
+
+```
+
+### Convert dates 
+Coarce start_date to date type. We will use the mdy function of lubridate.
+
+```{r}
+# coarse StartDate to date type
+loan_data$start_date<-mdy(loan_data$start_date)
+
+# glimpse loan data
+glimpse(loan_data)
+```
+
+### Response variable
+
+```{r}
+CrossTable(loan_data$loan_status360)
+```
+The response variable is categorical with three levels:
+
+1. Active
+2. Blocked
+3. Finished Payment
+
+The imbalance in the classes is noted for modeling as more information is available to classify the Active class, which may allow some models to result in good accuracy when predicting the Active class, but poor accuracy when predicting the Blocked class while having good overall accuracy. For this reason I will use the AUC metric for model evaluation.
+
+Let us encode these level names to standard r names
+```{r}
+# view the oreder of the levels-> "Active" "Blocked" "Finished Payment"
+levels(loan_data$loan_status360)
+
+#rename the levels as follows
+levels(loan_data$loan_status360) <- c("active","blocked","finished_payment")
+
+#confirm changes
+levels(loan_data$loan_status360)
+```
+Our data is now clean
+
+# Data Exploration
+## Numerical Variables
+
+### Descriptive Stats
+Lets look at some descriptive stats of some of some of the numeric variables like total_price, deposit, daily_rate, total_days, amount_paid30, amount_paid60, amount_paid360.
+
+```{r}
+# Identify the names of the numerical variables
+quant_names = c( 'total_price', 'deposit', 'daily_rate', 'total_days', 'amount_paid30', 'amount_paid60', 'amount_paid360')
+
+# Helper function to summarize each predictor
+quant_summary = function(data, vector_name) {
+    data %>% summarize_at(vector_name, funs(MIN=min,Q1 = quantile(., 0.25), MEAN = mean, MEDIAN = median, Q3 = quantile(., 0.75), MAX = max, IQR = IQR, STDEV = sd)) %>%
+                                mutate(SKEW = ifelse(MEAN > MEDIAN, "RIGHT", "LEFT"))
+}
+
+# Output table
+data.frame(Predictor = quant_names,
+                            bind_rows(
+                                quant_summary(loan_data, quant_names[1]),
+                                quant_summary(loan_data, quant_names[2]),
+                                quant_summary(loan_data, quant_names[3]),
+                                quant_summary(loan_data, quant_names[4]),
+                                quant_summary(loan_data, quant_names[5]),
+                                quant_summary(loan_data, quant_names[6]),
+                                quant_summary(loan_data, quant_names[7])
+                                
+                                )) %>% 
+                        pandoc.table(split.tables=Inf)
+```
+
+
+### Plot Distribution: density and histogram plot
+Lets plot the distribution of the numerical variables and date variable in relation to the response variable.
+```{r}
+one= ggplot(loan_data, aes(total_price, fill=loan_status360, color=loan_status360)) + geom_density(alpha=0.5)
+
+two = ggplot(loan_data, aes(deposit, fill=loan_status360, color=loan_status360)) + geom_density(alpha=0.5)
+
+three = ggplot(loan_data, aes(amount_paid30, fill=loan_status360, color=loan_status360)) + geom_density(alpha=0.5)
+
+four = ggplot(loan_data, aes(amount_paid60, fill=loan_status360, color=loan_status360)) + geom_density(alpha=0.5)
+
+five = ggplot(loan_data, aes(amount_paid360, fill=loan_status360, color=loan_status360)) + geom_density(alpha=0.5)
+
+six = ggplot(loan_data, aes(daily_rate, fill=loan_status360, color=loan_status360)) + geom_density(alpha=0.5)
+
+seven=ggplot(loan_data, aes(total_days, fill=loan_status360, color=loan_status360)) + geom_histogram(alpha=0.5)
+
+eight=ggplot(loan_data, aes(start_date, fill=loan_status360, color=loan_status360)) + geom_histogram(alpha=0.5)
+
+
+
+grid.arrange(one,two,ncol=1, nrow=2)
+
+grid.arrange(three,four,ncol=1, nrow=2)
+
+grid.arrange(five, six, ncol=1, nrow=2)
+
+grid.arrange(seven, eight, ncol=1, nrow=2)
+
+```
+
+
+total_price
+```{r}
+#total_price
+one
+```
+
+deposit
+```{r}
+ 
+#deposit
+two
+ 
+```
+
+daily_rate
+```{r}
+ 
+#daily-rate
+six
+ 
+```
+
+total_days
+```{r}
+#total_days
+seven
+ 
+```
+
+amount_paid30
+```{r}
+
+#amount_paid30
+three
+ 
+```
+
+amount_paid60
+```{r}
+
+#amount_paid60
+four
+ 
+```
+
+amount_paid360
+```{r}
+#amount_paid360
+five
+ 
+```
+
+start_date
+```{r}
+#amount_paid360
+eight
+ 
+```
+The graph shows that the number of loans taken generally increased as from 2012 to 2015 after which the number of loans taken started to decrease.
+
+The three categories of loan status exhibit the above behaviour too.
+
+The number of blocked loans was higher than finished loans all through.
+
+In addition majority of loans are those which are active all through the years.
+## Crosstabulation
+
+### default rates
+*What is the proportion of defaults in the data?*
+
+In order for the model to be able to make accurate forecasts it needs to see enough examples of what constitutes a default. For this reason it is important that there is a sufficiently large number of defaults in the data. Typically in practice, data with less than 5% of defaults pose strong modelling challenges.
+
+```{r}
+# Call CrossTable() on loan_status_360
+CrossTable(loan_data$loan_status360, prop.r=TRUE, prop.c=FALSE, prop.t=FALSE, prop.chisq=FALSE)
+```
+The percentage of those who defaulted/blcoked is 9.2%, so this data has just enough dafault rate for modelling.
+
+### response variable versus predictor variables
+Let use crosstable to explore date varaible, categorical variables and numerical variables in order to find out their relationship with the response variable.
+Loan amount is too large to be visually meaningful with cross table so we will not look at it here. However a density plot of loan amount has already been visualized above.
+
+We want to test the relationship between the response variable and the predictor variables. e.g start_date, total_price, deposit, daily_rate, total_days, customer_gender, product, and region.
+
+#### loan_status360 versus start_date in years
+```{r}
+# attache the loan data
+attach(loan_data)
+
+#crosstable
+CrossTable( year(start_date) , loan_status360, prop.r=TRUE, prop.c=FALSE, prop.t=FALSE, prop.chisq=FALSE)
+```
+It seems:
+Proportion of Active loans increased steadily from 2011 to 2016. 
+
+Proportion of Blocked loans fluctuated from 2011 to 2016. 
+
+Proportion of loans paid in full decreased steadily from 2011 to 2016. 
+
+2011 had zero defaults, 2014 had the highest defaults.
+
+#### loan_status360 versus deposit
+```{r}
+CrossTable( deposit, loan_status360, prop.r=TRUE, prop.c=FALSE, prop.t=FALSE, prop.chisq=FALSE)
+```
+It seems that there is no clear relationship between deposit and loan status. However, those who have a deposit of 2000 are most likely to default while those who have a deposit of 8000 seem not to default. 8000 deposit is associated with the active loans.
+
+#### loan_status360 versus total_price
+```{r}
+CrossTable( total_price, loan_status360, prop.r=TRUE, prop.c=FALSE, prop.t=FALSE, prop.chisq=FALSE)
+```
+
+It seems that there is no clear relationship between total price and loan status. However, there are zero defaulters when the total price is  equal to  13775, this could imply that this loan amount is generally affordable to MKOPA clients. There are also zero defaulters when the total price is 53625, this is surprising since one would expect default rates to increase with increase in total price. May be the clients who go for this amount can afford it. When the total price is 16600, clients are likely to default most.
+
+#### loan_status360 versus total_days
+```{r}
+CrossTable( total_days, loan_status360, prop.r=TRUE, prop.c=FALSE, prop.t=FALSE, prop.chisq=FALSE)
+```
+As at of 365 days Active loans are 6742, blocked loans are 849 and those which have been paid fully are 9195.
+
+#### loan_status360 versus daily_rate
+```{r}
+CrossTable( daily_rate, loan_status360, prop.r=TRUE, prop.c=FALSE, prop.t=FALSE, prop.chisq=FALSE)
+```
+There are no defaulters at a daily rate of 35, while there is just one case of defaulting at a daily rate of 165. 
+A daily rate of 40 is associated with the highest default rate followed by a daily rate of 50, surprsingly these rates are also associated with the highest number of laons which have been paid fully. This suggests that majority of the clients opt for loans which have a daily rate of 40 and 50.
+
+
+#### loan_status360 versus customer_gender
+```{r}
+CrossTable( customer_gender, loan_status360, prop.r=TRUE, prop.c=FALSE, prop.t=FALSE, prop.chisq=FALSE)
+```
+There are more male defaulters than female defaulters.
+
+#### loan_status360 versus product
+```{r}
+CrossTable( product, loan_status360, prop.r=TRUE, prop.c=FALSE, prop.t=FALSE, prop.chisq=FALSE)
+```
+
+In all the cases the majority of loans are those which are active.
+
+Product F has the highest proportion of defaulters followed by product B.
+
+Product E has the least proportion of defaulters followed by product D.
+
+#### loan_status360 versus region
+```{r}
+CrossTable(region, loan_status360, prop.r=TRUE, prop.c=FALSE, prop.t=FALSE, prop.chisq=FALSE)
+```
+Region 13 is associated with zero dafault rate.
+
+Region 17 is associated with the highest default rate.
+
+# Data preprocessing
+## Check for zero variance variables in relation to the response variable
+The most crucial information to determine at this stage in the analysis is whether any of the predictors have zero variance. A predictor has zero variance when all of its values are identical with respect to the response. For instance, if all observations of a predictor have only "Good" creditability. In such a case, the values of the predictor do not distinguish between the two classes in the response. Many models will fail to fit with zero variance predictors. In addition, if any individual category of a predictor is zero in respect to the response, then the model fitting will fail as many models separate categorical variables into separate predictors. If any predictor category has zero instances with respect to the response, the model will fail to fit.
+
+### Categorical variables
+Any predictor categories with zero instances with respect to the response?
+```{r}
+length(checkConditionalX(loan_data[,c("product", "customer_gender", "location", "region")], loan_data$loan_status360)) > 0
+```
+
+```{r}
+# Determine if any predictor has zero variance
+nzv = nearZeroVar(loan_data[,c("product", "customer_gender", "location", "region", "loan_status360" )], names = TRUE, saveMetrics = TRUE) 
+
+indexes = rownames(nzv)
+
+pandoc.table(data.frame(indexes = indexes, nzv) %>% tbl_df %>% arrange(desc(freqRatio)))
+```
+
+None of these categorical predictors has zero variance, but product and location have near zero variance. Let us remove location from the loan_data
+```{r}
+# remove location variable
+loan_data<-loan_data[, names(loan_data)!="location"]
+
+#verify changes
+glimpse(loan_data)
+```
+
+## convert categorical variables to numeric
+Dummifying factors breaks all the unique values into separate columns.
+```{r}
+# extract response varaible
+loan_status360=loan_data$loan_status360
+
+#dummyfy factor variables except response variable
+loan_data_dummy <- dummyVars('~.',data=loan_data[,names(loan_data)!='loan_status360'], fullRank=F)
+loan_data <- as.data.frame(predict(loan_data_dummy, loan_data))
+
+#view the structure of the new data frame
+glimpse(loan_data)# no response variable
+
+#add response variable to the data frame
+loan_data$loan_status360=loan_status360
+
+#verify
+glimpse(loan_data)#  response variable added
+```
+
+## split data into training set and test set
+```{r}
+seed=107
+
+set.seed(seed)
+
+inTrain <- createDataPartition(
+  
+  ## the outcome data are needed
+  y = loan_data$loan_status360,
+  
+  ## The percentage of data in the training set
+  p = .75,
+
+  list = FALSE
+)
+
+train.data <- loan_data[inTrain, ]
+train.predictors<- train.data[, names(train.data)!='loan_status360'] # predictors
+train.response<- train.data$loan_status360 # response
+
+test.data <- loan_data[-inTrain,]
+test.predictors<- test.data[, names(test.data)!='loan_status360'] # predictors
+test.response<- test.data$loan_status360 # response
+
+```
+
+#  Caret XGBOOST
+
+## Train control
+```{r}
+set.seed(seed)
+
+train_ctrl <- trainControl(
+  method = "repeatedcv", 
+  repeats = 3,
+  returnResamp = "all",
+  #savePredictions = TRUE,
+  summaryFunction = multiClassSummary,#(, logLoss, AUC, Accuracy, Kappa, F1, Sensitivity, Specificity, Pos_Pred-Value, Neg_Pred-Value,Detection_Rate,Balanced_Accuracy  ). Used for threeClass-problems
+  
+  classProbs = TRUE, #Since the ROC curve is based on the predicted class probabilities (which are not computed automatically)
+  
+  allowParallel = TRUE # allow paralellel processing
+)
+```
+
+## Fit the default model
+```{r}
+#set seed
+set.seed(seed)
+
+# fit the model
+xgbDefaultFit <- train(loan_status360~.,
+                data=train.data, 
+                method='xgbTree', 
+                trControl=train_ctrl,
+               # objective = "multi:softmax",
+                metric = "AUC"
+                )
+# save the model in the hard disk for using later
+save(xgbDefaultFit, file = "models/xgbDefaultFit.rda")
+
+#or
+
+#load the default model instead of fitting again
+#load("models/xgbDefaultFit.rda")
+```
+
+### Output the model
+```{r}
+xgbDefaultFit
+```
+
+
+### Best tune
+```{r}
+xgbDefaultFit$bestTune
+
+```
+Tuning parameter 'gamma' was held constant at a value of 0
+
+Tuning parameter 'min_child_weight' was held constant at a value of 1
+
+AUC was used to select the optimal model using the largest value.
+
+The final values used for the model were:
+* nrounds = 100, 
+* max_depth = 2, 
+* eta = 0.4, 
+* gamma = 0, 
+* colsample_bytree = 0.8, 
+* min_child_weight = 1 and 
+* subsample = 1.
+ 
+### Evaluate model
+Obtain predicted probabilities and classes of test data.
+
+Accuracy requires classes.
+AUC reguires probabilities.
+
+Let us begin by creating a list to hold the AUCs of the models
+```{r}
+model_AUCS<-c()
+```
+
+Lets us compute the AUC
+```{r}
+#classes
+xgbDefaultClasses <- predict(object=xgbDefaultFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=xgbDefaultClasses, test.response)
+
+# probabilities
+xgbDefaultProbs <- predict(object=xgbDefaultFit, test.predictors, type='prob')
+
+#performance AUC of the three classes
+AUCs<-colAUC(xgbDefaultProbs, test.response)
+AUCs
+
+## convert AUCs to dataframe
+AUCs_df<-data.frame(AUCs)
+
+##glimpse
+glimpse(AUCs_df)
+
+## obtain average performance(auc) of each class
+a=AUCs_df%>% colMeans()
+a
+
+## obtain the average performance(auc) of the three classes
+default_model_average_auc<-mean(a)
+default_model_average_auc
+
+## save the AUC of the model
+model_AUCS[['xgbDefaultFit']]<-default_model_average_auc
+
+## save model_AUCs in the computer for using later
+save(model_AUCS, file = "AUCs/model_AUCS.rda")
+```
+Our model has an accuracy of 95.74%, kappa of 89.59%. Based on these two parameters this model has a very good performance. The p value of the model is very small, this suggests that the model has fit our data well.
+
+The AUC of Predictions with test data is telling us that our model has an average of 0.951965 AUC score (remember that an AUC ranges between 0.5 and 1, where 0.5 is random and 1 is perfect). This model ia performing very well.
+
+Tuning parameter 'gamma' was held constant at a value of 0
+
+Tuning parameter 'min_child_weight' was held constant at a value of 1
+
+AUC was used to select the optimal model using the largest value.
+
+The final values used for the model were:
+* nrounds = 100, 
+* max_depth = 2, 
+* eta = 0.4, 
+* gamma = 0, 
+* colsample_bytree = 0.8, 
+* min_child_weight = 1 and 
+* subsample = 1.
+ 
+### Plot
+Variables according to their improtance
+```{r}
+plot(varImp(xgbDefaultFit,scale=F))
+```
+
+### Obtain the best predictors
+Let us obtain the best predictors to train our models before tuning. We want to find out if this will improve the model.
+```{r}
+# List features according to their importance
+variables.rank<-varImp(xgbDefaultFit)
+variables.rank
+variables.rank$importance$Overall
+
+# choose those variables whose overall importance is greater than 0
+important_var_index<-variables.rank$importance$Overall>0
+
+# The above operation returns a boolean vector. Use it to subset variables
+variable_names<-rownames(variables.rank$importance)
+important_var<-variable_names[important_var_index]
+important_var
+
+# save important var for using later
+# create a new file
+fileConn<-file("predictors/important_var.csv", open = "wt")
+
+writeLines('important_var', fileConn)
+
+for (predictor in important_var) {
+  
+  # save to the new file
+  writeLines(predictor, fileConn)
+}
+
+# close the connection
+close(fileConn)
+
+```
+
+## Refit the default model using these important features
+We want to find out if the model will improve, we will use the tuning parameters obtained from above crossvalidation model
+```{r}
+# set seed
+set.seed(seed)
+#############################################################################
+train_ctrl_grid_search <- trainControl(
+  method = "repeatedcv", 
+  repeats = 3,
+  returnResamp = "all",
+  search="grid",
+  
+  summaryFunction = multiClassSummary,#(, logLoss, AUC, Accuracy, Kappa, F1, Sensitivity, Specificity, Pos_Pred-Value, Neg_Pred-Value,Detection_Rate,Balanced_Accuracy  ). Used for threeClass-problems
+  
+  classProbs = TRUE, #Since the ROC curve is based on the predicted class probabilities (which are not computed automatically)
+  
+  allowParallel = TRUE # allow paralellel processing
+)
+
+##############################################################################
+xgb.grid <- expand.grid(eta = 0.4, nrounds=100, max_depth =
+ 2, gamma = 0, colsample_bytree = 0.8, min_child_weight = 1, subsample = 1)
+
+##############################################################################
+
+# load the important predictors. It is loaded as a dataframe
+important_var_df<-read_csv('predictors/important_var.csv')
+
+# View the data frame
+head(important_var_df)
+
+#clean the variable names
+# convert replace ` with space, trim
+important_var_df$important_var<-important_var_df$important_var %>% 
+                    str_replace_all("[`]", "")%>%
+                    str_trim()
+
+#subset the train data with the important var and response variable
+train.data2<-train.data[, important_var_df$important_var]
+
+# add response variable
+train.data2$loan_status360<-train.data$loan_status360
+
+#glimpse
+glimpse(train.data2)
+
+#remove NAs
+train.data2<-train.data2[complete.cases(train.data2),]
+#############################################################################
+#fit the model
+xgbDefaultImpFeaturesFit <- train(loan_status360~.,
+                data=train.data2, 
+                method='xgbTree', 
+                trControl=train_ctrl_grid_search,
+                tuneGrid = xgb.grid,
+                metric = "AUC"
+                )
+# save the model for using later
+save(xgbDefaultImpFeaturesFit, file = "models/xgbDefaultImpFeaturesFit.rda")
+
+#or
+
+#load the model instead of fitting again
+#load("models/xgbDefaultImpFeaturesFit.rda")
+```
+
+### Evaluate model
+Obtain predicted probabilities and classes of test data.
+
+Accuracy requires classes.
+AUC reguires probabilities.
+
+```{r}
+#classes
+xgbDefaultImpFeaturesClasses <- predict(object=xgbDefaultImpFeaturesFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=xgbDefaultImpFeaturesClasses, test.response)
+
+# probabilities
+xgbDefaultImpFeaturesProbs <- predict(object=xgbDefaultImpFeaturesFit, test.predictors, type='prob')
+
+#performance AUC of the three classes
+AUCs<-colAUC(xgbDefaultImpFeaturesProbs, test.response)
+AUCs
+
+## convert AUCs to dataframe
+AUCs_df<-data.frame(AUCs)
+
+##glimpse
+glimpse(AUCs_df)
+
+## obtain average performance(auc) of each class
+a=AUCs_df%>% colMeans()
+a
+
+## obtain the average performance(auc) of the three classes
+average_auc<-mean(a)
+average_auc
+
+## save the AUC of the model
+model_AUCS[['xgbDefaultImpFeaturesFit']]<-average_auc
+
+## save model_AUCs in the computer for using later
+save(model_AUCS, file = "AUCs/model_AUCS.rda")
+```
+Our model has an accuracy of 95.78%, kappa of 89.7%. Based on these two parameters this model has a very good performance. The p value of the model is very small, this suggests that the model has fit our data well.
+
+The AUC of Predictions with test data is telling us that our model has an average of 0.9514034 AUC score (remember that an AUC ranges between 0.5 and 1, where 0.5 is random and 1 is perfect). This model is performing very well however the default model with all the features performed better.
+
+
+Moving on, I will tune the default model that has all the features.
+
+## Parameter tuning
+
+### Caret xgboost tunable parameters
+```{r}
+#modelLookup("xgbTree")
+getModelInfo("xgbTree")
+```
+1. nrounds		        # Boosting Iterations or number of trees
+2. max_depth	        # Max Tree Depth	
+3. eta	              # Shrinkage	or learning rate
+4. gamma	            # Minimum Loss Reduction	
+5. colsample_bytree	  # Subsample Ratio of Columns	
+6. min_child_weight	  # Minimum Sum of Instance Weight	
+7. subsample          # Subsample Percentage
+
+### Tuned Model With grid search
+We will tune as follows:
+I'll follow the most common but effective steps in parameter tuning:
+
+1. Set eta = 0.4, max_depth = 2, min_child_weight = 1, gamma = 0, subsample = 1, colsample_bytree = 0.8
+    a. Find the best nrounds by using seq(from = 50, to = 500, by = 50)
+2. Set nrounds equal to best value from 1a
+    a. Find the best max_depth by using seq(1,10,1) and 
+    b. min_child_weight by using seq(1,6,1) 
+3. Set max_depth and min_child_weight to best value from 2a
+    a. Find the best gamma using seq(0,0.5,0.1)
+    b. Find the best nrounds by using seq(from = 50, to = 500, by = 50)
+4. Set gamma to best value from 3a and set nrounds to the best value from 3b
+    a. Find the best subsample using seq(0.6,1,0.05) 
+    b. Find the best colsample_bytree using seq(0.6,1,0.05) 
+5. Set subsample and colsample_bytree to best values from 4a
+    a. IF REGULARIZING ONLY- Find best alpha or lambda values using seq(0,1,0.1)
+    b. Find best eta using seq(0.01,0.1,0.01)
+6. Set alpha and lambda to best values from 5a and eta to best value from 5b
+
+### Train control
+We will use train_ctrl_grid_search defined above.
+
+### Grid: Tuning nrounds
+```{r}
+set.seed(seed)
+
+xgb.grid <- expand.grid(nrounds=seq(from = 50, to = 950, by = 50),eta = 0.4, max_depth = 2, min_child_weight = 1, gamma = 0, subsample = 1, colsample_bytree = 0.8 )
+
+```
+
+
+### Fit the nrounds tuned model
+```{r}
+
+set.seed(seed)
+
+xgbNRoundsTunedFit <- train(loan_status360~.,
+                data=train.data,
+                method='xgbTree', 
+                trControl=train_ctrl_grid_search,
+                metric = "AUC",
+                tuneGrid = xgb.grid
+                )
+# save the model for using later
+save(xgbNRoundsTunedFit, file = "models/xgbNRoundsTunedFit.rda")
+
+#or
+
+#load the model instead of fitting again
+#load("models/xgbNRoundsTunedFit.rda")
+```
+
+#### Output the model
+```{r}
+xgbNRoundsTunedFit
+```
+
+
+#### Best tune
+```{r}
+xgbNRoundsTunedFit$bestTune
+```
+Best nrounds=150.
+
+#### Evaluate model
+Obtain predicted probabilities and classes of test data
+
+Accuracy requires classes.
+ROC reguires probabilities.
+
+```{r}
+#classes
+xgbNRoundsTunedClasses <- predict(object=xgbNRoundsTunedFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=xgbNRoundsTunedClasses, test.response)
+
+# probabilities
+xgbNRoundsTunedProbs <- predict(object=xgbNRoundsTunedFit, test.predictors, type='prob')
+
+#performance AUC of the three classes
+AUCs<-colAUC(xgbNRoundsTunedProbs, test.response)
+AUCs
+
+## convert AUCs to dataframe
+AUCs_df<-data.frame(AUCs)
+
+##glimpse
+glimpse(AUCs_df)
+
+## obtain average performance(auc) of each class
+a=AUCs_df%>% colMeans()
+a
+
+## obtain the average performance(auc) of the three classes
+average_auc<-mean(a)
+average_auc
+
+## save the AUC of the model
+model_AUCS[['xgbNRoundsTunedFit']]<-average_auc
+```
+Our model has an accuracy of 95.74%, kappa of 89.61%. Based on these two parameters this model has a very good performance.
+
+The AUC of Predictions with test data is telling us that our model has a 0.9582901 AUC score (remember that an AUC ranges between 0.5 and 1, where 0.5 is random and 1 is perfect).
+
+This model is performing better than the default model which had a 0.951965 AUC score.
+
+The best nrounds is 150.
+
+
+#### Refit the model with best nrounds to confirm the AUC
+Let us refit this model with the best nrounds to confirm the AUC
+```{r}
+set.seed(seed)
+
+xgb.grid <- expand.grid(nrounds=150,eta = 0.4, max_depth = 2, min_child_weight = 1, gamma = 0, subsample = 1, colsample_bytree = 0.8 )
+
+set.seed(seed)
+
+xgbNRoundsTunedFit <- train(loan_status360~.,
+                data=train.data,
+                method='xgbTree', 
+                trControl=train_ctrl_grid_search,
+                metric = "AUC",
+                tuneGrid = xgb.grid
+                )
+# save the model for using later
+save(xgbNRoundsTunedFit, file = "models/xgbNRoundsTunedFit.rda")
+
+#classes
+xgbNRoundsTunedClasses <- predict(object=xgbNRoundsTunedFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=xgbNRoundsTunedClasses, test.response)
+
+# probabilities
+xgbNRoundsTunedProbs <- predict(object=xgbNRoundsTunedFit, test.predictors, type='prob')
+
+#performance AUC of the three classes
+AUCs<-colAUC(xgbNRoundsTunedProbs, test.response)
+AUCs
+
+## convert AUCs to dataframe
+AUCs_df<-data.frame(AUCs)
+
+##glimpse
+glimpse(AUCs_df)
+
+## obtain average performance(auc) of each class
+a=AUCs_df%>% colMeans()
+a
+
+## obtain the average performance(auc) of the three classes
+average_auc<-mean(a)
+average_auc
+
+## save the AUC of the model
+model_AUCS[['xgbNRoundsTunedFit']]<-average_auc
+
+## save model_AUCs in the computer for using later
+save(model_AUCS, file = "AUCs/model_AUCS.rda")
+```
+
+Confirmed Accuracy= 95.74
+cofirmed Kappa=89.61
+Confirmed AUC:0.9582901. This is the highest so far.
+
+Best nrounds = 150.
+
+The final values used for the model were:
+* nrounds = 150, 
+* max_depth = 2, 
+* eta = 0.4, 
+* gamma = 0, 
+* colsample_bytree = 0.8, 
+* min_child_weight = 1 and 
+* subsample = 1.
+
+Next we tune max_depth 
+
+
+### Grid: Tuning maxdepth
+```{r}
+set.seed(seed)
+
+xgb.grid <- expand.grid(nrounds=150,eta = 0.4, max_depth = seq(1,10,1), min_child_weight = 1, gamma = 0, subsample = 1, colsample_bytree = 0.8)
+```
+
+
+### Fit the max_depth tuned model
+```{r}
+
+set.seed(seed)
+
+xgbMaxDepthTunedFit <- train(loan_status360~.,
+                data=train.data,
+                method='xgbTree', 
+                trControl=train_ctrl_grid_search,
+                metric = "AUC",
+                tuneGrid = xgb.grid
+                )
+# save the model for using later
+save(xgbMaxDepthTunedFit, file = "models/xgbMaxDepthTunedFit.rda")
+
+#or
+
+#load the model instead of fitting again
+#load("models/xgbMaxDepthTunedFit.rda")
+```
+
+#### Output the model
+```{r}
+xgbMaxDepthTunedFit
+```
+
+
+#### Best tune
+```{r}
+xgbMaxDepthTunedFit$bestTune
+```
+Best max_depth=2
+
+#### Evaluate model
+Obtain predicted probabilities and classes of test data
+
+Accuracy requires classes.
+ROC reguires probabilities.
+
+```{r}
+#classes
+xgbMaxDepthTunedClasses <- predict(object=xgbMaxDepthTunedFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=xgbMaxDepthTunedClasses, test.response)
+
+# probabilities
+xgbMaxDepthTunedProbs <- predict(object=xgbMaxDepthTunedFit, test.predictors, type='prob')
+
+#performance AUC of the three classes
+AUCs<-colAUC(xgbMaxDepthTunedProbs, test.response)
+AUCs
+
+## convert AUCs to dataframe
+AUCs_df<-data.frame(AUCs)
+
+##glimpse
+glimpse(AUCs_df)
+
+## obtain average performance(auc) of each class
+a=AUCs_df%>% colMeans()
+a
+
+## obtain the average performance(auc) of the three classes
+average_auc<-mean(a)
+average_auc
+
+## save the AUC of the model
+model_AUCS[['xgbMaxDepthTunedFit']]<-average_auc
+```
+Our model has an accuracy of 95.69%, kappa of 89.49%. Based on these two parameters this model has a very good performance.
+
+The AUC of Predictions with test data is telling us that our model has a 0.956381 AUC score (remember that an AUC ranges between 0.5 and 1, where 0.5 is random and 1 is perfect).
+
+This model is performing better than the default model which had a 0.951965 AUC score.
+
+The best max_depth=2.
+
+#### Refit the model with best max_depth to confirm the AUC
+Let us refit this model with the best max_depth to confirm the AUC
+```{r}
+set.seed(seed)
+
+xgb.grid <- expand.grid(nrounds=150,eta = 0.4, max_depth = 2, min_child_weight = 1, gamma = 0, subsample = 1, colsample_bytree = 0.8)
+
+set.seed(seed)
+
+xgbMaxDepthTunedFit <- train(loan_status360~.,
+                data=train.data,
+                method='xgbTree', 
+                trControl=train_ctrl_grid_search,
+                metric = "AUC",
+                tuneGrid = xgb.grid
+                )
+# save the model for using later
+save(xgbMaxDepthTunedFit, file = "models/xgbMaxDepthTunedFit.rda")
+
+#classes
+xgbMaxDepthTunedClasses <- predict(object=xgbMaxDepthTunedFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=xgbMaxDepthTunedClasses, test.response)
+
+# probabilities
+xgbMaxDepthTunedProbs <- predict(object=xgbMaxDepthTunedFit, test.predictors, type='prob')
+
+#performance AUC of the three classes
+AUCs<-colAUC(xgbMaxDepthTunedProbs, test.response)
+AUCs
+
+## convert AUCs to dataframe
+AUCs_df<-data.frame(AUCs)
+
+##glimpse
+glimpse(AUCs_df)
+
+## obtain average performance(auc) of each class
+a=AUCs_df%>% colMeans()
+a
+
+## obtain the average performance(auc) of the three classes
+average_auc<-mean(a)
+average_auc
+
+## save the AUC of the model
+model_AUCS[['xgbMaxDepthTunedFit']]<-average_auc
+
+## save model_AUCs in the computer for using later
+save(model_AUCS, file = "AUCs/model_AUCS.rda")
+```
+Confirmed Accuracy= 0.9574 
+cofirmed Kappa=89.61
+Confirmed AUC:0.9582901. This is the highest so far.
+
+Best max_depth = 2.
+
+The final values used for the model were:
+* nrounds = 150, 
+* max_depth = 2, 
+* eta = 0.4, 
+* gamma = 0, 
+* colsample_bytree = 0.8, 
+* min_child_weight = 1 and 
+* subsample = 1.
+
+Next we tune min_child_weight.
+
+### Grid: Tuning min_child_weight.
+```{r}
+set.seed(seed)
+
+xgb.grid <- expand.grid(nrounds=150,eta = 0.4, max_depth = 2, min_child_weight = seq(1,6,1), gamma = 0, subsample = 1, colsample_bytree = 0.8)
+
+```
+
+
+### Fit min_child_weight tuned model
+```{r}
+
+set.seed(seed)
+
+xgbChildWeightTunedFit <- train(loan_status360~.,
+                data=train.data,
+                method='xgbTree', 
+                trControl=train_ctrl_grid_search,
+                metric = "AUC",
+                tuneGrid = xgb.grid
+                )
+# save the model for using later
+save(xgbChildWeightTunedFit, file = "models/xgbChildWeightTunedFit.rda")
+
+#or
+
+#load the model instead of fitting again
+#load("models/xgbChildWeightTunedFit.rda")
+```
+
+#### Output the model
+```{r}
+xgbChildWeightTunedFit
+```
+
+#### Best tune
+```{r}
+xgbChildWeightTunedFit$bestTune
+```
+The best min_child_weight=2
+#### Evaluate model
+Obtain predicted probabilities and classes of test data
+
+Accuracy requires classes.
+ROC reguires probabilities.
+
+```{r}
+#classes
+xgbChildWeightTunedClasses <- predict(object=xgbChildWeightTunedFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=xgbChildWeightTunedClasses, test.response)
+
+# probabilities
+xgbChildWeightTunedProbs <- predict(object=xgbChildWeightTunedFit, test.predictors, type='prob')
+
+#performance AUC of the three classes
+AUCs<-colAUC(xgbChildWeightTunedProbs, test.response)
+AUCs
+
+## convert AUCs to dataframe
+AUCs_df<-data.frame(AUCs)
+
+##glimpse
+glimpse(AUCs_df)
+
+## obtain average performance(auc) of each class
+a=AUCs_df%>% colMeans()
+a
+
+## obtain the average performance(auc) of the three classes
+average_auc<-mean(a)
+average_auc
+
+## save the AUC of the model
+model_AUCS[['xgbChildWeightTunedFit']]<-average_auc
+```
+Our model has an accuracy of 95.95%, kappa of 90.12%. Based on these two parameters this model has a very good performance.
+
+The AUC of Predictions with test data is telling us that our model has a 0.9583424 AUC score (remember that an AUC ranges between 0.5 and 1, where 0.5 is random and 1 is perfect).
+
+The best min_child_weight = 2.
+
+#### Refit the model with best mini_child_weight to confirm the AUC
+Let us refit this model with the best min_child_weight to confirm the AUC
+```{r}
+set.seed(seed)
+
+xgb.grid <- expand.grid(nrounds=150,eta = 0.4, max_depth = 2, min_child_weight = 2, gamma = 0, subsample = 1, colsample_bytree = 0.8)
+
+set.seed(seed)
+
+xgbChildWeightTunedFit <- train(loan_status360~.,
+                data=train.data,
+                method='xgbTree', 
+                trControl=train_ctrl_grid_search,
+                metric = "AUC",
+                tuneGrid = xgb.grid
+                )
+# save the model for using later
+save(xgbChildWeightTunedFit, file = "models/xgbChildWeightTunedFit.rda")
+
+#classes
+xgbChildWeightTunedClasses <- predict(object=xgbChildWeightTunedFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=xgbChildWeightTunedClasses, test.response)
+
+# probabilities
+xgbChildWeightTunedProbs <- predict(object=xgbChildWeightTunedFit, test.predictors, type='prob')
+
+#performance AUC of the three classes
+AUCs<-colAUC(xgbChildWeightTunedProbs, test.response)
+AUCs
+
+## convert AUCs to dataframe
+AUCs_df<-data.frame(AUCs)
+
+##glimpse
+glimpse(AUCs_df)
+
+## obtain average performance(auc) of each class
+a=AUCs_df%>% colMeans()
+a
+
+## obtain the average performance(auc) of the three classes
+average_auc<-mean(a)
+average_auc
+
+## save the AUC of the model
+model_AUCS[['xgbChildWeightTunedFit']]<-average_auc
+
+## save model_AUCs in the computer for using later
+save(model_AUCS, file = "AUCs/model_AUCS.rda")
+```
+
+Confirmed Accuracy= 95.65
+cofirmed Kappa=89.37
+Confirmed AUC: 0.9587847. This is the highest so far.
+
+Best min_child_weight = 2.
+
+The final values used for the model were:
+* nrounds = 150, 
+* max_depth = 2, 
+* eta = 0.4, 
+* gamma = 0, 
+* colsample_bytree = 0.8, 
+* min_child_weight = 2 and 
+* subsample = 1.
+
+
+Next we tune gamma.
+
+
+
+### Grid: Tuning gamma.
+```{r}
+set.seed(seed)
+
+xgb.grid <- expand.grid(nrounds=150,eta = 0.4, max_depth = 2, min_child_weight = 2, gamma = seq(0,0.5,0.1), subsample = 1, colsample_bytree = 0.8)
+
+```
+
+
+### Fit gamma tuned model
+```{r}
+
+set.seed(seed)
+
+xgbGammaTunedFit <- train(loan_status360~.,
+                data=train.data,
+                method='xgbTree', 
+                trControl=train_ctrl_grid_search,
+                metric = "AUC",
+                tuneGrid = xgb.grid
+                )
+# save the model for using later
+save(xgbGammaTunedFit, file = "models/xgbGammaTunedFit.rda")
+
+#or
+
+#load the model instead of fitting again
+#load("models/xgbGammaTunedFit.rda")
+```
+
+#### Output the model
+```{r}
+xgbGammaTunedFit
+```
+
+#### Best tune
+```{r}
+xgbGammaTunedFit$bestTune
+```
+Best gamma is 0.1
+#### Evaluate model
+Obtain predicted probabilities and classes of test data
+
+Accuracy requires classes.
+ROC reguires probabilities.
+
+```{r}
+#classes
+xgbGammaTunedClasses <- predict(object=xgbGammaTunedFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=xgbGammaTunedClasses, test.response)
+
+# probabilities
+xgbGammaTunedProbs <- predict(object=xgbGammaTunedFit, test.predictors, type='prob')
+
+#performance AUC of the three classes
+AUCs<-colAUC(xgbGammaTunedProbs, test.response)
+AUCs
+
+## convert AUCs to dataframe
+AUCs_df<-data.frame(AUCs)
+
+##glimpse
+glimpse(AUCs_df)
+
+## obtain average performance(auc) of each class
+a=AUCs_df%>% colMeans()
+a
+
+## obtain the average performance(auc) of the three classes
+average_auc<-mean(a)
+average_auc
+
+## save the AUC of the model
+model_AUCS[['xgbGammaTunedFit']]<-average_auc
+```
+Our model has an accuracy of 95.82%, kappa of 89.83%. Based on these two parameters this model has a very good performance.
+
+The AUC of Predictions with test data is telling us that our model has a 0.9583282 AUC score (remember that an AUC ranges between 0.5 and 1, where 0.5 is random and 1 is perfect).
+
+The best gamma = 0.1
+
+#### Refit the model with best gamma to confirm the AUC
+Let us refit this model with the best gamma to confirm the AUC
+```{r}
+set.seed(seed)
+
+xgb.grid <- expand.grid(nrounds=150,eta = 0.4, max_depth = 2, min_child_weight = 2, gamma = 0.1, subsample = 1, colsample_bytree = 0.8)
+
+set.seed(seed)
+
+xgbGammaTunedFit <- train(loan_status360~.,
+                data=train.data,
+                method='xgbTree', 
+                trControl=train_ctrl_grid_search,
+                metric = "AUC",
+                tuneGrid = xgb.grid
+                )
+# save the model for using later
+save(xgbGammaTunedFit, file = "models/xgbGammaTunedFit.rda")
+
+#classes
+xgbGammaTunedClasses <- predict(object=xgbGammaTunedFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=xgbGammaTunedClasses, test.response)
+
+# probabilities
+xgbGammaTunedProbs <- predict(object=xgbGammaTunedFit, test.predictors, type='prob')
+
+#performance AUC of the three classes
+AUCs<-colAUC(xgbGammaTunedProbs, test.response)
+AUCs
+
+## convert AUCs to dataframe
+AUCs_df<-data.frame(AUCs)
+
+##glimpse
+glimpse(AUCs_df)
+
+## obtain average performance(auc) of each class
+a=AUCs_df%>% colMeans()
+a
+
+## obtain the average performance(auc) of the three classes
+average_auc<-mean(a)
+average_auc
+
+## save the AUC of the model
+model_AUCS[['xgbGammaTunedFit']]<-average_auc
+
+## save model_AUCs in the computer for using later
+save(model_AUCS, file = "AUCs/model_AUCS.rda")
+```
+
+Confirmed Accuracy= 95.74 
+cofirmed Kappa=89.6
+Confirmed AUC: 0.9584713. This is lower than the model whose gamma was 0.
+
+Best gamma = 0.1
+
+The final values used for the model were:
+* nrounds = 150, 
+* max_depth = 2, 
+* eta = 0.4, 
+* gamma = 0.1, 
+* colsample_bytree = 0.8, 
+* min_child_weight = 2 and 
+* subsample = 1.
+
+Next we tune nrounds. 
+
+
+### Grid: Tuning nrounds.
+```{r}
+set.seed(seed)
+
+xgb.grid <- expand.grid(nrounds=seq(from = 50, to = 500, by = 50),eta = 0.4, max_depth = 2, min_child_weight = 2, gamma = 0.1, subsample = 1, colsample_bytree = 0.8)
+
+```
+
+
+### Fit nrounds tuned model
+```{r}
+
+set.seed(seed)
+
+xgbNroundsTuned2Fit <- train(loan_status360~.,
+                data=train.data,
+                method='xgbTree', 
+                trControl=train_ctrl_grid_search,
+                metric = "AUC",
+                tuneGrid = xgb.grid
+                )
+# save the model for using later
+save(xgbNroundsTuned2Fit, file = "models/xgbNroundsTuned2Fit.rda")
+
+#or
+
+#load the model instead of fitting again
+#load("models/xgbNroundsTuned2Fit.rda")
+```
+
+#### Output the model
+```{r}
+xgbNroundsTuned2Fit
+```
+
+#### Best tune
+```{r}
+xgbNroundsTuned2Fit$bestTune
+```
+Best nrounds is 150
+
+#### Evaluate model
+Obtain predicted probabilities and classes of test data
+
+Accuracy requires classes.
+ROC reguires probabilities.
+
+```{r}
+#classes
+xgbNroundsTuned2Classes <- predict(object=xgbNroundsTuned2Fit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=xgbNroundsTuned2Classes, test.response)
+
+# probabilities
+xgbNroundsTuned2Probs <- predict(object=xgbNroundsTuned2Fit, test.predictors, type='prob')
+
+#performance AUC of the three classes
+AUCs<-colAUC(xgbNroundsTuned2Probs, test.response)
+AUCs
+
+## convert AUCs to dataframe
+AUCs_df<-data.frame(AUCs)
+
+##glimpse
+glimpse(AUCs_df)
+
+## obtain average performance(auc) of each class
+a=AUCs_df%>% colMeans()
+a
+
+## obtain the average performance(auc) of the three classes
+average_auc<-mean(a)
+average_auc
+
+## save the AUC of the model
+model_AUCS[['xgbNroundsTuned2Fit']]<-average_auc
+```
+Our model has an accuracy of 95.74%, kappa of 89.6%. Based on these two parameters this model has a very good performance.
+
+The AUC of Predictions with test data is telling us that our model has a 0.9584713 AUC score (remember that an AUC ranges between 0.5 and 1, where 0.5 is random and 1 is perfect).
+
+
+The best nrounds=150
+
+#### Refit the model with best nrounds to confirm the AUC
+Let us refit this model with the best nrounds confirm the AUC. If the AUC is not the highest, change gamma to 0. In thos case i realised that by changinh the gamma to 0 the model performed better.
+```{r}
+set.seed(seed)
+
+xgb.grid <- expand.grid(nrounds=150,eta = 0.4, max_depth = 2, min_child_weight = 2, gamma = 0, subsample = 1, colsample_bytree = 0.8)
+
+set.seed(seed)
+xgbNroundsTuned2Fit <- train(loan_status360~.,
+                data=train.data,
+                method='xgbTree', 
+                trControl=train_ctrl_grid_search,
+                metric = "AUC",
+                tuneGrid = xgb.grid
+                )
+# save the model for using later
+save(xgbNroundsTuned2Fit, file = "models/xgbNroundsTuned2Fit.rda")
+
+#classes
+xgbNroundsTuned2Classes <- predict(object=xgbNroundsTuned2Fit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=xgbNroundsTuned2Classes, test.response)
+
+# probabilities
+xgbNroundsTuned2Probs <- predict(object=xgbNroundsTuned2Fit, test.predictors, type='prob')
+
+#performance AUC of the three classes
+AUCs<-colAUC(xgbNroundsTuned2Probs, test.response)
+AUCs
+
+## convert AUCs to dataframe
+AUCs_df<-data.frame(AUCs)
+
+##glimpse
+glimpse(AUCs_df)
+
+## obtain average performance(auc) of each class
+a=AUCs_df%>% colMeans()
+a
+
+## obtain the average performance(auc) of the three classes
+average_auc<-mean(a)
+average_auc
+
+## save the AUC of the model
+model_AUCS[['xgbNroundsTuned2Fit']]<-average_auc
+
+## save model_AUCs in the computer for using later
+save(model_AUCS, file = "AUCs/model_AUCS.rda")
+```
+
+Confirmed Accuracy= 95.65
+confirmed Kappa=89.37
+Confirmed AUC: 0.9587847, this is the highest AUC so far
+
+
+The best nrounds=150
+
+The final values used for this model were:
+* nrounds = 150, 
+* max_depth = 2, 
+* eta = 0.4, 
+* gamma = 0, 
+* colsample_bytree = 0.8, 
+* min_child_weight = 2 and 
+* subsample = 1.
+
+Next we tune subsample.
+
+
+
+### Grid: Tuning subsample
+
+```{r}
+set.seed(seed)
+
+xgb.grid <- expand.grid(nrounds=150,eta = 0.4, max_depth = 2, min_child_weight = 2, gamma = 0.1, subsample = seq(0.6,1,0.05), colsample_bytree = 0.8)
+
+```
+
+
+### Fit subsample tuned model
+```{r}
+
+set.seed(seed)
+
+xgbSubSampleTunedFit <- train(loan_status360~.,
+                data=train.data,
+                method='xgbTree', 
+                trControl=train_ctrl_grid_search,
+                metric = "AUC",
+                tuneGrid = xgb.grid
+                )
+# save the model for using later
+save(xgbSubSampleTunedFit, file = "models/xgbSubSampleTunedFit.rda")
+
+#or
+
+#load the model instead of fitting again
+load("models/xgbSubSampleTunedFit.rda")
+```
+
+#### Output the model
+```{r}
+xgbSubSampleTunedFit
+```
+
+#### Best tune
+```{r}
+xgbSubSampleTunedFit$bestTune
+```
+Best subsample is 1
+
+#### Evaluate model
+Obtain predicted probabilities and classes of test data
+
+Accuracy requires classes.
+ROC reguires probabilities.
+
+```{r}
+#classes
+xgbSubSampleTunedClasses <- predict(object=xgbSubSampleTunedFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=xgbSubSampleTunedClasses, test.response)
+
+# probabilities
+xgbSubSampleTunedProbs <- predict(object=xgbSubSampleTunedFit, test.predictors, type='prob')
+
+#performance AUC of the three classes
+AUCs<-colAUC(xgbSubSampleTunedProbs, test.response)
+AUCs
+
+## convert AUCs to dataframe
+AUCs_df<-data.frame(AUCs)
+
+##glimpse
+glimpse(AUCs_df)
+
+## obtain average performance(auc) of each class
+a=AUCs_df%>% colMeans()
+a
+
+## obtain the average performance(auc) of the three classes
+average_auc<-mean(a)
+average_auc
+
+## save the AUC of the model
+model_AUCS[['xgbSubSampleTunedFit']]<-average_auc
+```
+Our model has an accuracy of 95.82%, kappa of 89.81%. Based on these two parameters this model has a very good performance.
+
+The AUC of Predictions with test data is telling us that our model has a 0.9574435 AUC score (remember that an AUC ranges between 0.5 and 1, where 0.5 is random and 1 is perfect).
+
+The best subsample=1
+
+#### Refit the model with best subsample to confirm the AUC
+Let us refit this model with the best subsample confirm the AUC. 
+```{r}
+set.seed(seed)
+
+xgb.grid <- expand.grid(nrounds=150,eta = 0.4, max_depth = 2, min_child_weight = 2, gamma = 0.1, subsample = 1, colsample_bytree = 1)
+
+set.seed(seed)
+
+xgbSubSampleTunedFit <- train(loan_status360~.,
+                data=train.data,
+                method='xgbTree', 
+                trControl=train_ctrl_grid_search,
+                metric = "AUC",
+                tuneGrid = xgb.grid
+                )
+# save the model for using later
+save(xgbSubSampleTunedFit, file = "models/xgbSubSampleTunedFit.rda")
+
+#classes
+xgbSubSampleTunedClasses <- predict(object=xgbSubSampleTunedFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=xgbSubSampleTunedClasses, test.response)
+
+# probabilities
+xgbSubSampleTunedProbs <- predict(object=xgbSubSampleTunedFit, test.predictors, type='prob')
+
+#performance AUC of the three classes
+AUCs<-colAUC(xgbSubSampleTunedProbs, test.response)
+AUCs
+
+## convert AUCs to dataframe
+AUCs_df<-data.frame(AUCs)
+
+##glimpse
+glimpse(AUCs_df)
+
+## obtain average performance(auc) of each class
+a=AUCs_df%>% colMeans()
+a
+
+## obtain the average performance(auc) of the three classes
+average_auc<-mean(a)
+average_auc
+
+## save the AUC of the model
+model_AUCS[['xgbSubSampleTunedFit']]<-average_auc
+
+## save model_AUCs in the computer for using later
+save(model_AUCS, file = "AUCs/model_AUCS.rda")
+```
+
+Confirmed Accuracy= 0.9587
+cofirmed Kappa=0.9587
+Confirmed AUC: 0.9586879
+
+The best subsample=1
+
+The final values used for this model were:
+* nrounds = 150, 
+* max_depth = 2, 
+* eta = 0.4, 
+* gamma = 0.1, 
+* colsample_bytree = 0.8, 
+* min_child_weight = 2 and 
+* subsample = 1.
+
+Next we tune colsample_bytree 
+
+
+
+
+### Grid: Tuning colsample_bytree
+```{r}
+set.seed(seed)
+
+xgb.grid <- expand.grid(nrounds=150,eta = 0.4, max_depth = 2, min_child_weight = 2, gamma = 0.1, subsample = 1, colsample_bytree =seq(0.6,1,0.05) )
+
+```
+
+
+### Fit colsample_bytree tuned model
+```{r}
+
+set.seed(seed)
+
+xgbColSampleTunedFit <- train(loan_status360~.,
+                data=train.data,
+                method='xgbTree', 
+                trControl=train_ctrl_grid_search,
+                metric = "AUC",
+                tuneGrid = xgb.grid
+                )
+# save the model for using later
+save(xgbColSampleTunedFit, file = "models/xgbColSampleTunedFit.rda")
+
+#or
+
+#load the model instead of fitting again
+#load("models/xgbColSampleTunedFit.rda")
+```
+
+#### Output the model
+```{r}
+xgbColSampleTunedFit
+```
+
+#### Best tune
+```{r}
+xgbColSampleTunedFit$bestTune
+```
+Best colsample_bytree is 0.85
+
+#### Evaluate model
+Obtain predicted probabilities and classes of test data
+
+Accuracy requires classes.
+ROC reguires probabilities.
+
+```{r}
+#classes
+xgbColSampleTunedClasses <- predict(object=xgbColSampleTunedFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=xgbColSampleTunedClasses, test.response)
+
+# probabilities
+xgbColSampleTunedProbs <- predict(object=xgbColSampleTunedFit, test.predictors, type='prob')
+
+#performance AUC of the three classes
+AUCs<-colAUC(xgbColSampleTunedProbs, test.response)
+AUCs
+
+## convert AUCs to dataframe
+AUCs_df<-data.frame(AUCs)
+
+##glimpse
+glimpse(AUCs_df)
+
+## obtain average performance(auc) of each class
+a=AUCs_df%>% colMeans()
+a
+
+## obtain the average performance(auc) of the three classes
+average_auc<-mean(a)
+average_auc
+
+## save the AUC of the model
+model_AUCS[['xgbColSampleTunedFit']]<-average_auc
+
+```
+Our model has an accuracy of 95.6%, kappa of 89.26%. Based on these two parameters this model has a very good performance.
+
+The AUC of Predictions with test data is telling us that our model has a 0.9587386 AUC score (remember that an AUC ranges between 0.5 and 1, where 0.5 is random and 1 is perfect).
+
+This is the second highest AUC so far.
+
+Best colsample_bytree is 0.85
+
+#### Refit the model with best colsample_bytree to confirm the AUC
+Let us refit this model with the best colsample_bytree confirm the AUC.
+```{r}
+set.seed(seed)
+
+xgb.grid <- expand.grid(nrounds=150,eta = 0.4, max_depth = 2, min_child_weight = 2, gamma = 0.1, subsample = 1, colsample_bytree =0.85 )
+
+
+set.seed(seed)
+
+xgbColSampleTunedFit <- train(loan_status360~.,
+                data=train.data,
+                method='xgbTree', 
+                trControl=train_ctrl_grid_search,
+                metric = "AUC",
+                tuneGrid = xgb.grid
+                )
+# save the model for using later
+save(xgbColSampleTunedFit, file = "models/xgbColSampleTunedFit.rda")
+
+#classes
+xgbColSampleTunedClasses <- predict(object=xgbColSampleTunedFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=xgbColSampleTunedClasses, test.response)
+
+# probabilities
+xgbColSampleTunedProbs <- predict(object=xgbColSampleTunedFit, test.predictors, type='prob')
+
+#performance AUC of the three classes
+AUCs<-colAUC(xgbColSampleTunedProbs, test.response)
+AUCs
+
+## convert AUCs to dataframe
+AUCs_df<-data.frame(AUCs)
+
+##glimpse
+glimpse(AUCs_df)
+
+## obtain average performance(auc) of each class
+a=AUCs_df%>% colMeans()
+a
+
+## obtain the average performance(auc) of the three classes
+average_auc<-mean(a)
+average_auc
+
+## save the AUC of the model
+model_AUCS[['xgbColSampleTunedFit']]<-average_auc
+
+## save model_AUCs in the computer for using later
+save(model_AUCS, file = "AUCs/model_AUCS.rda")
+```
+Confirmed Accuracy=95.74 
+Confirmed Kappa=89.6
+Confirmed AUC=0.9574311
+
+Best colsample_bytree is 0.85
+
+The final values used for this model were:
+* nrounds = 150, 
+* max_depth = 2, 
+* eta = 0.4, 
+* gamma = 0.1, 
+* colsample_bytree = 0.85, 
+* min_child_weight = 2 and 
+* subsample = 1.
+
+Next we tune alpha.
+
+
+
+### Tuning alpha manually
+Expand grid
+```{r}
+set.seed(seed)
+
+xgb.grid <- expand.grid(nrounds=150,eta = 0.4, max_depth = 2, min_child_weight = 2, gamma = 0.1, subsample = 1, colsample_bytree = 0.85)
+
+```
+
+
+### Fit alpha tuned model
+Fit the model
+```{r}
+#create a list to hold our models
+modellist <- list()
+
+# create a vector of alphas
+alphas<-seq(0,1,0.1)
+
+# set seed
+set.seed(seed)
+
+#fit the models
+for (alpha in alphas) {
+  xgbAlphaTunedFit <- train(loan_status360~.,
+                  data=train.data,
+                  method='xgbTree', 
+                  trControl=train_ctrl_grid_search,
+                  metric = "AUC",
+                  tuneGrid = xgb.grid,
+                  alpha=alpha
+                  )
+	key <- toString(alpha)
+	modellist[[key]] <- xgbAlphaTunedFit
+}
+```
+
+Compare the models
+```{r}
+# compare results
+results <- resamples(modellist)
+summary(results)
+dotplot(results)
+```
+
+Obtain the best model from the model list. To do this, test each model on the test data. Select the one that has the highest predicted AUC. 
+
+Model with an alpha of 0.6 has the highest predicted AUC of 0.9581038. So let us select this model as our final model
+```{r}
+
+best.model<-modellist['0.6']
+xgbAlphaTunedFit<-best.model[['0.6']]
+```
+
+Save the best model
+```{r}
+
+# save the model for using later
+save(xgbAlphaTunedFit, file = "models/xgbAlphaTunedFit.rda")
+
+#or
+
+#load the model instead of fitting again
+#load("models/xgbAlphaTunedFit.rda")
+```
+
+
+So best alpha is 0.6
+
+#### Evaluate model
+Obtain predicted probabilities and classes of test data
+
+Accuracy requires classes.
+ROC reguires probabilities.
+
+```{r}
+#classes
+xgbAlphaTunedClasses <- predict(object=xgbAlphaTunedFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=xgbAlphaTunedClasses, test.response)
+
+# probabilities
+xgbAlphaTunedProbs <- predict(object=xgbAlphaTunedFit, test.predictors, type='prob')
+
+#performance AUC of the three classes
+AUCs<-colAUC(xgbAlphaTunedProbs, test.response)
+AUCs
+
+## convert AUCs to dataframe
+AUCs_df<-data.frame(AUCs)
+
+##glimpse
+glimpse(AUCs_df)
+
+## obtain average performance(auc) of each class
+a=AUCs_df%>% colMeans()
+a
+
+## obtain the average performance(auc) of the three classes
+average_auc<-mean(a)
+average_auc
+
+## save the AUC of the model
+model_AUCS[['xgbAlphaTunedFit']]<-average_auc
+
+## save model_AUCs in the computer for using later
+save(model_AUCS, file = "AUCs/model_AUCS.rda")
+```
+Our model has an accuracy of 95.78%, kappa of 89.73%. Based on these two parameters this model has a very good performance.
+
+The AUC of Predictions with test data is telling us that our model has a 0.9581038 AUC score (remember that an AUC ranges between 0.5 and 1, where 0.5 is random and 1 is perfect).
+
+Best alpha according to this tuning is 0.6
+
+#### Refit the model with best alpha to confirm the AUC
+Let us refit this model with the best alpha to confirm the AUC.
+```{r}
+set.seed(seed)
+
+xgb.grid <- expand.grid(nrounds=150,eta = 0.4, max_depth = 2, min_child_weight = 2, gamma = 0.1, subsample = 1, colsample_bytree = 0.85)
+
+set.seed(seed)
+
+xgbAlphaTunedFit <- train(loan_status360~.,
+                  data=train.data,
+                  method='xgbTree', 
+                  trControl=train_ctrl_grid_search,
+                  metric = "AUC",
+                  tuneGrid = xgb.grid,
+                  alpha=0.6
+                  )
+# save the model for using later
+save(xgbAlphaTunedFit, file = "models/xgbAlphaTunedFit.rda")
+
+#classes
+xgbAlphaTunedClasses <- predict(object=xgbAlphaTunedFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=xgbAlphaTunedClasses, test.response)
+
+# probabilities
+xgbAlphaTunedProbs <- predict(object=xgbAlphaTunedFit, test.predictors, type='prob')
+
+#performance AUC of the three classes
+AUCs<-colAUC(xgbAlphaTunedProbs, test.response)
+AUCs
+
+## convert AUCs to dataframe
+AUCs_df<-data.frame(AUCs)
+
+##glimpse
+glimpse(AUCs_df)
+
+## obtain average performance(auc) of each class
+a=AUCs_df%>% colMeans()
+a
+
+## obtain the average performance(auc) of the three classes
+average_auc<-mean(a)
+average_auc
+
+## save the AUC of the model
+model_AUCS[['xgbAlphaTunedFit']]<-average_auc
+
+## save model_AUCs in the computer for using later
+save(model_AUCS, file = "AUCs/model_AUCS.rda")
+```
+
+Confirmed Accuracy=95.65
+Confirmed Kappa=89.4
+Confirmed AUC=0.9542269
+
+Best alpha is 0.6
+
+The final values used for this model were:
+* nrounds = 150, 
+* max_depth = 2, 
+* eta = 0.4, 
+* gamma = 0.1, 
+* colsample_bytree = 0.85, 
+* min_child_weight = 2 and 
+* subsample = 1.
+* alpha=0.6
+
+Next we tune lambda, we will set alpha to 0.6.
+
+
+
+### Manual: Tuning lambda manually
+Expand grid
+```{r}
+set.seed(seed)
+
+xgb.grid <- expand.grid(nrounds=150,eta = 0.4, max_depth = 2, min_child_weight = 2, gamma = 0.1, subsample = 1, colsample_bytree = 0.85)
+
+```
+
+
+### Fit lambda tuned model
+Fit the model
+```{r}
+#create a list to hold our models
+modellist2 <- list()
+
+# create a vector of alphas
+lambdas<-seq(0,1,0.1)
+
+# set seed
+set.seed(seed)
+
+#fit the models
+for (lambda in lambdas) {
+  xgbLambdaTunedFit <- train(loan_status360~.,
+                  data=train.data,
+                  method='xgbTree', 
+                  trControl=train_ctrl_grid_search,
+                  metric = "AUC",
+                  tuneGrid = xgb.grid,
+                  alpha=0.6,
+                  lambda=lambda
+                  )
+	key <- toString(lambda)
+	modellist2[[key]] <- xgbLambdaTunedFit
+}
+```
+
+Compare the models
+```{r}
+# compare results
+results <- resamples(modellist2)
+summary(results)
+dotplot(results)
+```
+
+Obtain the best model from the model list. To do this, test each model on the test data. Select the one that has the highest predicted AUC. 
+
+Model with a lambda of 1 has the highest predicted AUC of 0.9574357. So let us select this model as our final model
+```{r}
+
+best.model<-modellist2['1']
+xgbLambdaTunedFit<-best.model[['1']]
+```
+
+Save the best model
+```{r}
+
+# save the model for using later
+save(xgbLambdaTunedFit, file = "models/xgbLambdaTunedFit.rda")
+
+#or
+
+#load the model instead of fitting again
+#load("models/xgbLambdaTunedFit.rda")
+```
+
+
+So best lambda is 1
+
+#### Evaluate model
+Obtain predicted probabilities and classes of test data
+
+Accuracy requires classes.
+ROC reguires probabilities.
+
+```{r}
+#classes
+xgbLambdaTunedClasses <- predict(object=xgbLambdaTunedFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=xgbLambdaTunedClasses, test.response)
+
+# probabilities
+xgbLambdaTunedProbs <- predict(object=xgbLambdaTunedFit, test.predictors, type='prob')
+
+#performance AUC of the three classes
+AUCs<-colAUC(xgbLambdaTunedProbs, test.response)
+AUCs
+
+## convert AUCs to dataframe
+AUCs_df<-data.frame(AUCs)
+
+##glimpse
+glimpse(AUCs_df)
+
+## obtain average performance(auc) of each class
+a=AUCs_df%>% colMeans()
+a
+
+## obtain the average performance(auc) of the three classes
+average_auc<-mean(a)
+average_auc
+
+## save the AUC of the model
+model_AUCS[['xgbLambdaTunedFit']]<-average_auc
+
+## save model_AUCs in the computer for using later
+save(model_AUCS, file = "AUCs/model_AUCS.rda")
+```
+Our model has an accuracy of 95.78%, kappa of 89.73%. Based on these two parameters this model has a very good performance.
+
+The AUC of Predictions with test data is telling us that our model has a 0.9574357 AUC score (remember that an AUC ranges between 0.5 and 1, where 0.5 is random and 1 is perfect).
+
+Best lambda according to this tuning is 1.
+
+#### Refit the model with best lambda to confirm the AUC
+Let us refit this model with the best lambda to confirm the AUC.
+```{r}
+set.seed(seed)
+
+xgb.grid <- expand.grid(nrounds=150,eta = 0.4, max_depth = 2, min_child_weight = 2, gamma = 0.1, subsample = 1, colsample_bytree = 0.85)
+
+set.seed(seed)
+xgbLambdaTunedFit <- train(loan_status360~.,
+                  data=train.data,
+                  method='xgbTree', 
+                  trControl=train_ctrl_grid_search,
+                  metric = "AUC",
+                  tuneGrid = xgb.grid,
+                  alpha=0.6,
+                  lambda=1
+                  )
+
+# save the model for using later
+save(xgbLambdaTunedFit, file = "models/xgbLambdaTunedFit.rda")
+
+#classes
+xgbLambdaTunedClasses <- predict(object=xgbLambdaTunedFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=xgbLambdaTunedClasses, test.response)
+
+# probabilities
+xgbLambdaTunedProbs <- predict(object=xgbLambdaTunedFit, test.predictors, type='prob')
+
+#performance AUC of the three classes
+AUCs<-colAUC(xgbLambdaTunedProbs, test.response)
+AUCs
+
+## convert AUCs to dataframe
+AUCs_df<-data.frame(AUCs)
+
+##glimpse
+glimpse(AUCs_df)
+
+## obtain average performance(auc) of each class
+a=AUCs_df%>% colMeans()
+a
+
+## obtain the average performance(auc) of the three classes
+average_auc<-mean(a)
+average_auc
+
+## save the AUC of the model
+model_AUCS[['xgbLambdaTunedFit']]<-average_auc
+
+## save model_AUCs in the computer for using later
+save(model_AUCS, file = "AUCs/model_AUCS.rda")
+```
+Confirmed Accuracy=95.65
+Confirmed Kappa=89.4
+Confirmed AUC=0.9542269
+
+Best lambda according to this tuning is 1.
+The final values used for this model were:
+* nrounds = 150, 
+* max_depth = 2, 
+* eta = 0.4, 
+* gamma = 0.1, 
+* colsample_bytree = 0.85, 
+* min_child_weight = 2 and 
+* subsample = 1.
+* alpha=0.6
+* lambda=1
+
+Lastly we tune eta.
+
+### Grid: Tuning eta.
+```{r}
+set.seed(seed)
+
+xgb.grid <- expand.grid(nrounds=150,eta = seq(0.1,0.3,0.1), max_depth = 2, min_child_weight = 2, gamma = 0.1, subsample = 1, colsample_bytree = 0.85)
+
+```
+
+
+### Fit eta tuned model
+```{r}
+
+set.seed(seed)
+
+xgbEtaTunedFit <- train(loan_status360~.,
+                data=train.data,
+                method='xgbTree', 
+                trControl=train_ctrl_grid_search,
+                metric = "AUC",
+                tuneGrid = xgb.grid,
+                alpha=0.6,
+                lambda=1
+                )
+# save the model for using later
+save(xgbEtaTunedFit, file = "models/xgbEtaTunedFit.rda")
+
+#or
+
+#load the model instead of fitting again
+#load("models/xgbEtaTunedFit.rda")
+```
+
+#### Output the model
+```{r}
+xgbEtaTunedFit
+```
+
+#### Best tune
+```{r}
+xgbEtaTunedFit$bestTune
+```
+The best eta is 0.3
+#### Evaluate model
+Obtain predicted probabilities and classes of test data
+
+Accuracy requires classes.
+ROC reguires probabilities.
+
+```{r}
+#classes
+xgbEtaTunedClasses <- predict(object=xgbEtaTunedFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=xgbEtaTunedClasses, test.response)
+
+# probabilities
+xgbEtaTunedProbs <- predict(object=xgbEtaTunedFit, test.predictors, type='prob')
+
+#performance AUC of the three classes
+AUCs<-colAUC(xgbEtaTunedProbs, test.response)
+AUCs
+
+## convert AUCs to dataframe
+AUCs_df<-data.frame(AUCs)
+
+##glimpse
+glimpse(AUCs_df)
+
+## obtain average performance(auc) of each class
+a=AUCs_df%>% colMeans()
+a
+
+## obtain the average performance(auc) of the three classes
+average_auc<-mean(a)
+average_auc
+
+## save the AUC of the model
+model_AUCS[['xgbEtaTunedFit']]<-average_auc
+```
+Our model has an accuracy of  95.78%, kappa of 89.71 %. Based on these two parameters this model has a very good performance.
+
+The AUC of Predictions with test data is telling us that our model has a 0.9518648 AUC score (remember that an AUC ranges between 0.5 and 1, where 0.5 is random and 1 is perfect).
+
+The best eta= 0.3.
+
+#### Refit the model with best eta to confirm the AUC
+Let us refit this model with the best eta confirm the AUC. 
+
+```{r}
+set.seed(seed)
+
+xgb.grid <- expand.grid(nrounds=150,eta = 0.3, max_depth = 2, min_child_weight = 2, gamma = 0.1, subsample = 1, colsample_bytree = 0.85)
+
+set.seed(seed)
+
+xgbEtaTunedFit <- train(loan_status360~.,
+                data=train.data,
+                method='xgbTree', 
+                trControl=train_ctrl_grid_search,
+                metric = "AUC",
+                tuneGrid = xgb.grid,
+                alpha=0.6,
+                lambda=1
+                )
+# save the model for using later
+save(xgbEtaTunedFit, file = "models/xgbEtaTunedFit.rda")
+
+#classes
+xgbEtaTunedClasses <- predict(object=xgbEtaTunedFit, test.predictors)
+
+#performance accuracy
+confusionMatrix(data=xgbEtaTunedClasses, test.response)
+
+# probabilities
+xgbEtaTunedProbs <- predict(object=xgbEtaTunedFit, test.predictors, type='prob')
+
+#performance AUC of the three classes
+AUCs<-colAUC(xgbEtaTunedProbs, test.response)
+AUCs
+
+## convert AUCs to dataframe
+AUCs_df<-data.frame(AUCs)
+
+##glimpse
+glimpse(AUCs_df)
+
+## obtain average performance(auc) of each class
+a=AUCs_df%>% colMeans()
+a
+
+## obtain the average performance(auc) of the three classes
+average_auc<-mean(a)
+average_auc
+
+## save the AUC of the model
+model_AUCS[['xgbEtaTunedFit']]<-average_auc
+
+## save model_AUCs in the computer for using later
+save(model_AUCS, file = "AUCs/model_AUCS.rda")
+
+```
+
+Confirmed Accuracy=95.78 
+Confirmed Kappa=89.71
+Confirmed AUC=0.9518876
+
+The best eta is 0.3
+
+The final values used for this model were:
+* nrounds = 150, 
+* max_depth = 2, 
+* eta = 0.3, 
+* gamma = 0.1, 
+* colsample_bytree = 0.85, 
+* min_child_weight = 2 and 
+* subsample = 1.
+* alpha=0.6
+* lambda=1
+
+## Best model 
+Let us obtain the best tuned model that has the highest AUC
+```{r}
+#list the model AUCs
+model_AUCS
+
+#convert list to dataframe
+model_AUCS1<-data.frame(model_AUCS=model_AUCS)
+
+# save the models and AUCs further as dataframes
+model_AUCS_df<-data.frame(model=rownames(model_AUCS1), AUC=model_AUCS1$model_AUCS)
+
+#obtain best model
+Best_model<-  model_AUCS_df%>%
+    filter(AUC==max(AUC))
+Best_model
+
+```
+
+The best model is the xgbChildWeightTunedFit and xgbNroundsTuned2Fit both with a maximum AUC score of 0.9587847	.
+
+## Final tuned model with the highest AUC
+Name the model as final_model and set it equal to xgbChildWeightTunedFit or xgbNroundsTuned2Fit. This is the model that can be used for future predicitons.
+```{r}
+#load the model instead of fitting again
+load("models/xgbChildWeightTunedFit.rda")
+
+#final model
+final_model<-xgbChildWeightTunedFit
+
+#final model best parameters
+final_model$bestTune
+```
+
+
+# Important Features
+## List features according to their importance
+```{r}
+# List features according to their importance
+variables.rank<-varImp(final_model)
+variables.rank
+variables.rank$importance$Overall
+
+# choose those variables whose overall importance is greater than 0
+important_var_index<-variables.rank$importance$Overall>0
+
+# The above operation returns a boolean vector. Use it to subset Overall
+overall<-variables.rank$importance$Overall
+important_overall<-overall[important_var_index]
+
+# The above operation returns a boolean vector. Use it to subset variables
+variable_names<-rownames(variables.rank$importance)
+important_var<-variable_names[important_var_index]
+important_var
+
+#combine into a dataframe
+important_var_df<-data.frame(important_var=important_var,important_overall=important_overall)
+
+
+# Arrange 
+important_var_df = important_var_df %>% arrange(important_overall)
+
+#view
+important_var_df
+
+#dim
+dim(important_var_df)
+
+```
+The dimensions of the above dataframe tell us that there are 23 variables whose predictive value is above 0.
+
+We will plot these next.
+
+## Plot top 23 features
+```{r}
+# plot top 20 features
+ggplot(variables.rank, top = 23)+
+      ggtitle("Plot of Variables According to their Importance")
+
+```
+
+It appears the amount_paid360 has the highest predictive value for determining loan status. Notably, the variables not on this list do not have a predictive value for loan status.
+
+NB: I removed Location variable because it had near to zero variance. I would have loved to keep it and use xgboost to automatically select the important features but my laptop took too long to fit the model and by the following day it had not finished fitting the model. I will obtain a better laptop though.
+
+In addition my laptop could not allow tuning of more than one parameter at the same time. I have a feeling that the model can be tuned further to get the best parameters.
+
+I saved best predictors and also kept on saving my models and AUCs for using later since my computer is too slow. So make sure to create three mre folders i.e predictors, AUCs and models or comment out the saving bit of the code.
+
+
