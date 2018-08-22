@@ -194,7 +194,7 @@ At this point we may be tempted to conlcude that online recruitment source produ
 
 We will however have to confirm if these differences are signinficant by performing a statistical test.
 
-### Statisical test
+### Statistical test
 Perform a statistical test to quantify how big the difference is.
     + t.test->if feature used for comparing different groups is continous
     + chisq.test->if feature used for comparing different groups is categorical
