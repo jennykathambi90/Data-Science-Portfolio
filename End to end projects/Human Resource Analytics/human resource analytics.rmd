@@ -1,0 +1,226 @@
+---
+title: "Human Resource Analytics"
+author: "Jane Kathambi"
+date: "22 August 2018"
+output: 
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+    toc_depth: 6
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+---
+
+# Introduction
+
+HR analytics, people analytics, workforce analytics -- whatever you call it, businesses are increasingly counting on their human resources departments to answer questions, provide insights, and make recommendations using data about their employees. 
+
+So what is HR analytics?
+It is a data-driven approach to managing people at work.
+
+In this course, we will manipulate, visualize, and perform statistical tests on HR data through a series of HR analytics case studies.
+
+These case studies include:
+1. Identifying the best recruiting force
+2. What is driving low employee engagement?
+3. Are new hires getting paid too much?
+4. Are performance ratings being given consistently?
+5. Improving employee safety with data
+
+# The HR data
+
+Real HR datasets are tough to find because of privacy and ethical concerns about sharing sensitive employee data. The dataset we'll be using throughout this study is a synthetic one produced by IBM, and modified for learning purposes.
+
+# Methodology
+
+We will use a general process for HR analytics which is organised in three major steps:
+1. Identify the groups to compare
+
+Many questions in HR analytics can be turned into why one group is different from anaother group?
+e.g.
+
+    + high performers versus low performers.
+        + What could be the reson behind high performance and low performance?
+        
+    + sales department versus all other departments
+        + How do salaries compare 
+        
+2. Identify the metrics to use for comparisons i.e feature for use in comparisons. eg sales, attrition
+
+3. Calculate summary statistics about each groups
+    Compare the differences statistically or visually
+
+4. Plot or test the differences between those groups
+    Compare the differences statistically or visually
+    
+5. Perform a statistical test to quantify how big the difference is.
+    + t.test->if feature used for comparing different groups is continous
+    + chisq.test->if feature used for comparing different groups is categorical
+    + anova
+
+
+# Load the required libraries
+
+* tidyverse: Data Manipualtion, Data visualization.
+* readr: For loading csv data.
+* gridExtra: for arraging output on a window
+
+```{r}
+library(tidyverse)
+library(readr)
+library(gridExtra)
+```
+
+# Identifying the best recruiting source
+The best recruiting source means one that yields the best employees.
+
+What makes one hire/employee better than another? What are some of the quality of hire metrics?
+
+*  retention, or how long the employee stays, in this case attrition
+
+*  their manager's satisfaction with the hire
+
+*  job performance
+
+*  the amount of time it takes to become fully productive
+
+## Load the recruitment data 
+```{r}
+# Import the recruitment data
+recruitment <- read_csv("data/recruitment_data.csv")
+```
+
+## Explore the data 
+Let us explore the data in order to understand it.
+```{r}
+
+# Look at the first few rows of the dataset
+head(recruitment)
+
+#glimpse to view the internal structure.
+glimpse(recruitment)
+```
+
+## Which is the best recruiting source?
+
+Let us help the talent acquisition team understand which recruiting channel will produce the best sales hires and the lowest attrition rate of hires(these are quality of hire metrics,i.e sales and attrition) We will apply the HR analytics process to help them. Start by examining the groups to compare i.e recruiting channels in the data.
+
+1. Identify the groups to compare
+    + In this case study the groups to compare are the recruiting sources
+    
+2. Identify the metrics to use for comparisons i.e feature for use in comparisons.
+    + In this case study the best recruting source is the one that produces employees who have the following:
+        + High average sales
+        + Low average attrition
+        + High average performance rating
+        
+    + So, in this case study the metrics to use for comparisons are:
+        + sales_quota_pct, 
+        + attrition, 
+        + performance_rating.
+
+3. Compare the differences statistically. Calculate summary statistics of the above metrics for each group. We will compute the average of the three metrics.
+
+4. Compare the differences visually. Plot the differences between those groups
+    We will use a bar chart with groups to compare on the x axis and the averages on the y axis.
+    
+5. Perform a statistical test to quantify how big the difference is.
+    + t.test->if feature used for comparing different groups is continous. Use when the variable to compare is continuous.
+    
+    + chisq.test->if feature used for comparing different groups is categorical. Use when the variable to compare is categorical.
+
+### Statitical summaries
+Let us perform statistical summaries of sales and attrition per/by recruiting source.
+We will begin with sales then attrition.
+
+#### Sales per recruiting source
+
+```{r}
+summary_sales<-recruitment%>%
+ # filter() #to select the sales department, although this data set is for slaes department already so we comment out this code
+  group_by(recruiting_source)%>%
+  summarize(avg_sales_quota_pct=mean(sales_quota_pct))%>%
+  arrange(desc(avg_sales_quota_pct))
+
+summary_sales
+```
+It seems that those who applied online had the highest sales while those who applied via a search firm ahd the lowest sales.
+
+Let us move on and check out which source had the best i.e lowest attrition rate.
+#### Attrition per recruiting source
+
+```{r}
+summary_attrition<-recruitment%>%
+ # filter() #to select the sales department, although this data set is for slaes department already so we comment out this code
+  group_by(recruiting_source)%>%
+  summarize(avg_attrition=mean(attrition))%>%
+  arrange(avg_attrition)
+
+summary_attrition
+```
+It seems that those who applied online had the best i.e lowest attrition rate while those who applied via a search firm had worst i.e highest attrition rate.
+
+### Visualize the differences
+Let us visualize the differences in avg_sales_quota_pct per recruiting source and avg-attrition per recruiting source. Visualization is very crucial when there are so many groups although in this case they are just 5 group NA included.
+
+```{r}
+# Bar plot of average sales by recruiting source
+one<-ggplot(summary_sales, aes(x=reorder(recruiting_source, -avg_sales_quota_pct), y=avg_sales_quota_pct) )+
+  geom_col()+
+  ggtitle("Bar plot of average sales by \n recruiting source")+
+  ylab('Average Sales')+
+  xlab('Recruiting Source')+
+  theme(axis.text.x=element_text(angle=45, hjust=1))
+
+# Bar plot of average attrition by recruiting source
+two<-ggplot(summary_attrition, aes(x=reorder(recruiting_source, avg_attrition), y=avg_attrition) )+
+  geom_bar(stat='identity')+
+  ggtitle("Bar plot of average attrition by \n recruiting source")+ylab('Average Attrition')+
+  xlab('Recruiting Source')+
+  theme(axis.text.x=element_text(angle=45, hjust=1))
+
+
+grid.arrange(one,two,ncol=2, nrow=1)
+```
+
+* It seems that those who applied online had the highest sales while those who applied via a search firm ahd the lowest sales.
+* It also seems that those who applied online had the best i.e lowest attrition rate while those who applied via a search firm had worst i.e highest attrition rate.
+
+### Drawing conclusions
+
+At this point we may be tempted to conlcude that online recruitment source produced the best hires while search firm recrutiment source produced the worst hires, measured by attrition and sales. 
+
+We will however have to confirm if these differences are signinficant by performing a statistical test.
+
+### Statisical test
+Perform a statistical test to quantify how big the difference is.
+    + t.test->if feature used for comparing different groups is continous
+    + chisq.test->if feature used for comparing different groups is categorical
+    + anova
+    
+In this test we will perform statisitcal tests to confirm if;
+1. the difference in recruiting sources as depicted by sales is signifant.
+2. the difference in recruiting sources as depicted by attrition is signifant.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
